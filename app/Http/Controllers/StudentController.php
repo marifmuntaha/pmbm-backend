@@ -238,7 +238,7 @@ class StudentController extends Controller
             }
 
             // Dispatch job to send WhatsApp message with the PDF
-            SendWhatsAppMessage::dispatch($phoneNumber, 'Bukti Pendaftaran Anda', $signedPath, $filename);
+            SendWhatsAppMessage::dispatch($phoneNumber, 'Bukti pendaftaran Anda', null, 'Bukti pendaftaran Anda', $signedPath);
 
             return response()->json([
                 'status' => 'success',
