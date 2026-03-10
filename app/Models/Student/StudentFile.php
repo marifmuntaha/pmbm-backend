@@ -26,22 +26,26 @@ class StudentFile extends Model
 
     public function getFilePhotoAttribute(): string
     {
-        return $this->attributes['filePhoto'] != null ? url(Storage::url($this->attributes['filePhoto'])) : '';
+        $file = $this->attributes['filePhoto'] ?? null;
+        return $file ? url(Storage::url($file)) : '';
     }
 
     public function getFileKkAttribute(): string
     {
-        return $this->attributes['fileKk'] != null ? url(Storage::url($this->attributes['fileKk'])) : '';
+        $file = $this->attributes['fileKk'] ?? null;
+        return $file ? url(Storage::url($file)) : '';
     }
 
     public function getFileKtpAttribute(): string
     {
-        return $this->attributes['fileKtp'] != null ? url(Storage::url($this->attributes['fileKtp'])) : '';
+        $file = $this->attributes['fileKtp'] ?? null;
+        return $file ? url(Storage::url($file)) : '';
     }
 
     public function getFileAktaAttribute(): string
     {
-        return $this->attributes['fileAkta'] != null ? url(Storage::url($this->attributes['fileAkta'])) : '';
+        $file = $this->attributes['fileAkta'] ?? null;
+        return $file ? url(Storage::url($file)) : '';
     }
 
     public function getFileIjazahAttribute(): string
