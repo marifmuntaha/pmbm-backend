@@ -180,8 +180,6 @@ class StudentController extends Controller
     }
     public function generateRegistrationProof(Request $request)
     {
-        $tempPdfPath = null;
-
         try {
             $userId = $request->user()->id;
             $studentProgram = StudentProgram::with([
@@ -209,50 +207,24 @@ class StudentController extends Controller
             }
 
             $registrationService = new RegistrationProofService();
-            $certificateService = new CertificateService();
-            $tcpdfService = new TcpdfService();
 
             if (!$studentProgram->registration_number) {
                 $studentProgram = $registrationService->generateRegistrationProof($studentProgram);
             }
+
             $data = $registrationService->getRegistrationProofData($studentProgram, $request->query('frontend_url'));
-            $tempPdfPath = $registrationService->generatePdfFile($data);
-            $certificatePath = $certificateService->getCertificateForInstitution($studentProgram->institution, 'headmaster');
-            $certificatePassword = $certificateService->getCertificatePassword();
+            $signedPath = $registrationService->generateSignedPdfFile($data, $studentProgram->institution);
 
-            $filename = 'bukti-pendaftaran-' . $studentProgram->registration_number . '.pdf';
+            $filename = 'bukti-pendaftaran-' . ($studentProgram->registration_number ?? $userId) . '.pdf';
 
-            $response = $tcpdfService->signExistingPdf(
-                $tempPdfPath,
-                $filename,
-                $certificatePath,
-                $certificatePassword,
-                [
-                    'author' => 'Kepala Madrasah',
-                    'title' => 'Bukti Pendaftaran Murid Baru',
-                    'name' => $studentProgram->institution->head ?? 'Kepala Lembaga',
-                    'reason' => 'Bukti Pendaftaran Murid Baru'
-                ]
-            );
-
-            if ($tempPdfPath && file_exists($tempPdfPath)) {
-                @unlink($tempPdfPath);
-            }
-
-            return $response;
+            return response()->download($signedPath, $filename)->deleteFileAfterSend(true);
 
         } catch (ModelNotFoundException $e) {
-            if ($tempPdfPath && file_exists($tempPdfPath)) {
-                @unlink($tempPdfPath);
-            }
             return response()->json([
                 'status' => 'error',
                 'statusMessage' => 'Data pendaftaran tidak ditemukan.'
             ], 404);
         } catch (Exception $e) {
-            if ($tempPdfPath && file_exists($tempPdfPath)) {
-                @unlink($tempPdfPath);
-            }
             return response()->json([
                 'status' => 'error',
                 'statusMessage' => 'Terjadi kesalahan: ' . $e->getMessage()

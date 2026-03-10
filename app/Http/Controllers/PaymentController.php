@@ -289,8 +289,6 @@ class PaymentController extends Controller
             }
 
             $receiptService = new PaymentReceiptService();
-            $certificateService = new CertificateService();
-            $tcpdfService = new TcpdfService();
 
             // Generate receipt if not exists
             if (!$payment->receipt_number) {
@@ -305,45 +303,16 @@ class PaymentController extends Controller
             // Store QR code path for cleanup
             $qrCodePath = $data['qr_code_path'] ?? null;
 
-            // Generate PDF file using Dompdf
-            \Log::info('Generating PDF file', ['payment_id' => $id]);
-            $pdfPath = $receiptService->generatePdfFile($data);
-
-            // Get or generate certificate for institution
-            \Log::info('Getting certificate for institution', ['institution_id' => $payment->institution_id]);
-            $certificatePath = $certificateService->getCertificateForInstitution($payment->institution);
-            $certificatePassword = $certificateService->getCertificatePassword();
-
             // Generate signed PDF
-            $filename = 'receipt-' . $payment->receipt_number . '.pdf';
+            $signedPath = $receiptService->generateSignedPdfFile($data);
+            $filename = 'receipt-' . ($payment->receipt_number ?? $id) . '.pdf';
 
-            \Log::info('Signing generated PDF', [
-                'payment_id' => $id,
-                'filename' => $filename,
-                'has_certificate' => $certificatePath !== null,
-                'pdf_path' => $pdfPath
-            ]);
+            // Return the signed PDF as a response
+            $response = response()->download($signedPath, $filename)->deleteFileAfterSend(true);
 
-            $response = $tcpdfService->signExistingPdf(
-                $pdfPath,
-                $filename,
-                $certificatePath,
-                $certificatePassword,
-                [
-                    'author' => 'Bendahara Lembaga',
-                    'title' => 'bukti pembayaran PMBM',
-                    'name' => $data['signature_name'] ?? 'Bendahara',
-                    'reason' => 'bukti pembayaran PMBM'
-                ]
-            );
-
-            // Cleanup: Delete temporary files
+            // Cleanup: Delete temporary QR code
             if ($qrCodePath && file_exists($qrCodePath)) {
                 @unlink($qrCodePath);
-            }
-            if ($pdfPath && file_exists($pdfPath)) {
-                @unlink($pdfPath);
-                \Log::info('Temp PDF file deleted', ['path' => $pdfPath]);
             }
 
             return $response;

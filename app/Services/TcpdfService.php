@@ -23,11 +23,37 @@ class TcpdfService
      */
     public function signExistingPdf(string $pdfPath, string $filename, ?string $certificatePath = null, ?string $certificatePassword = null, array $metadata = []): Response
     {
+        $pdfOutput = $this->generateSignedPdfContent($pdfPath, $certificatePath, $certificatePassword, $metadata);
+
+        return response($pdfOutput, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Cache-Control' => 'private, max-age=0, must-revalidate',
+            'Pragma' => 'public',
+            'Expires' => 'Sat, 26 Jul 1997 05:00:00 GMT',
+            'Last-Modified' => gmdate('D, d M Y H:i:s') . ' GMT'
+        ]);
+    }
+
+    /**
+     * Sign an existing PDF and save it to a file
+     */
+    public function signExistingPdfToFile(string $pdfPath, string $outputPath, ?string $certificatePath = null, ?string $certificatePassword = null, array $metadata = []): bool
+    {
+        $pdfOutput = $this->generateSignedPdfContent($pdfPath, $certificatePath, $certificatePassword, $metadata);
+        return file_put_contents($outputPath, $pdfOutput) !== false;
+    }
+
+    /**
+     * Common logic to generate signed PDF content
+     */
+    private function generateSignedPdfContent(string $pdfPath, ?string $certificatePath = null, ?string $certificatePassword = null, array $metadata = []): string
+    {
         try {
             ini_set('memory_limit', '512M');
             set_time_limit(120);
 
-            Log::info('TCPDF+FPDI: Starting PDF signing', ['input' => $pdfPath, 'filename' => $filename]);
+            Log::info('TCPDF+FPDI: Starting PDF content generation', ['input' => $pdfPath]);
 
             if (!file_exists($pdfPath)) {
                 throw new Exception('Input PDF file not found: ' . $pdfPath);
@@ -95,14 +121,7 @@ class TcpdfService
                 // Use the template at 0,0 to prevent margin shift
                 $pdf->useTemplate($templateId, 0, 0);
 
-                // Add signature appearance on the first page?
-                // Or maybe the last? Usually valid for the whole doc.
-                // TCPDF adds visual signature widget to the page where setSignatureAppearance is called?
-                // The doc says: "The signature appearance is a widget annotation... It must be added to a page."
-
                 if ($pageNo == 1 && $certificatePath) {
-                     // Set signature appearance (if signature was set)
-                     // Position might need adjustment based on generated PDF layout
                     try {
                         if ($metadata['author'] == 'Kepala Madrasah') {
                             $pdf->setSignatureAppearance(
@@ -125,21 +144,12 @@ class TcpdfService
                 }
             }
 
-            // Output PDF
-            Log::info('TCPDF+FPDI: Generating PDF output');
-            $pdfOutput = $pdf->Output('', 'S');
-
-            return response($pdfOutput, 200, [
-                'Content-Type' => 'application/pdf',
-                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-                'Cache-Control' => 'private, max-age=0, must-revalidate',
-                'Pragma' => 'public',
-                'Expires' => 'Sat, 26 Jul 1997 05:00:00 GMT',
-                'Last-Modified' => gmdate('D, d M Y H:i:s') . ' GMT'
-            ]);
+            // Output PDF content
+            Log::info('TCPDF+FPDI: Generating PDF output content');
+            return $pdf->Output('', 'S');
 
         } catch (Exception $e) {
-            Log::error('TCPDF+FPDI: Signing error', [
+            Log::error('TCPDF+FPDI: PDF generation error', [
                 'error' => $e->getMessage(),
                 'line' => $e->getLine()
             ]);

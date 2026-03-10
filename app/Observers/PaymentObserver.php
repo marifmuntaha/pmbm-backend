@@ -14,18 +14,16 @@ use Illuminate\Support\Facades\Log;
 
 class PaymentObserver
 {
-    /**
-     * Handle the Payment "created" event.
-     */
     public function created(Payment $payment): void
     {
         try {
+            $payment->load(['institution']);
             $user = User::with('personal')->find($payment->userId);
             if ($user && $user->phone) {
                 $paymentReceiptService = new PaymentReceiptService();
                 $payment = $paymentReceiptService->generateReceipt($payment, $user);
                 $receiptData = $paymentReceiptService->getReceiptData($payment);
-                $receiptPath = $paymentReceiptService->generatePdfFile($receiptData);
+                $receiptPath = $paymentReceiptService->generateSignedPdfFile($receiptData);
 
                 $message = "*PMBM YAYASAN DARUL HIKMAH*" . PHP_EOL . PHP_EOL;
                 $message .= "Halo, {$user->personal->name}." . PHP_EOL;
@@ -59,7 +57,7 @@ class PaymentObserver
                                 'gross_amount' => $totalAmount,
                             ],
                             'customer_details' => [
-                                'first_name' => collect(explode(' ', $user->personal->name ?? ''))->first(),
+                                'first_name' => $user->personal->name ?? '',
                                 'email' => $user->email,
                                 'phone' => $user->phone,
                             ],

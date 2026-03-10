@@ -13,7 +13,7 @@ use chillerlan\QRCode\QROptions;
 use Exception;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
-use Log;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class PaymentReceiptService
@@ -286,5 +286,51 @@ class PaymentReceiptService
         ]);
 
         return Storage::path($path);
+    }
+
+    /**
+     * Generate signed PDF file
+     */
+    public function generateSignedPdfFile(array $data): string
+    {
+        $pdfPath = $this->generatePdfFile($data);
+
+        try {
+            $payment = $data['payment'];
+            $certificateService = new CertificateService();
+            $tcpdfService = new TcpdfService();
+
+            $certificatePath = $certificateService->getCertificateForInstitution($payment->institution);
+            $certificatePassword = $certificateService->getCertificatePassword();
+
+            $studentName = isset($data['student_name']) && $data['student_name'] !== 'N/A' ? \Illuminate\Support\Str::slug($data['student_name']) : \Illuminate\Support\Str::random(10);
+            $signedFilename = 'receipt-' . ($payment->receipt_number ?? $studentName) . '.pdf';
+            $signedPath = storage_path('app/temp/' . $signedFilename);
+
+            $tcpdfService->signExistingPdfToFile(
+                $pdfPath,
+                $signedPath,
+                $certificatePath,
+                $certificatePassword,
+                [
+                    'author' => 'Bendahara Lembaga',
+                    'title' => 'bukti pembayaran PMBM',
+                    'name' => $data['signature_name'] ?? 'Bendahara',
+                    'reason' => 'bukti pembayaran PMBM'
+                ]
+            );
+
+            // Cleanup unsigned PDF
+            if (file_exists($pdfPath)) {
+                @unlink($pdfPath);
+            }
+
+            return $signedPath;
+
+        } catch (Exception $e) {
+            \Log::error('Failed to sign payment receipt', ['error' => $e->getMessage()]);
+            // Return unsigned path as fallback if signing fails
+            return $pdfPath;
+        }
     }
 }

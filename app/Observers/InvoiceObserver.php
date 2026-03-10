@@ -51,7 +51,7 @@ class InvoiceObserver
                         'gross_amount' => $totalAmount,
                     ],
                     'customer_details' => [
-                        'first_name' => collect(explode(' ', $user->personal->name))->first(),
+                        'first_name' => $user->personal->name ?? '',
                         'email' => $user->email,
                         'phone' => $user->phone,
                     ],

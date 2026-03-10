@@ -130,7 +130,7 @@ class InvoiceController extends Controller
                             'gross_amount' => $totalAmount,
                         ],
                         'customer_details' => [
-                            'first_name' => collect(explode(' ', $user->personal->name ?? ''))->first(),
+                            'full_name' => $user->personal->name ?? '',
                             'email' => $user->email,
                             'phone' => $user->phone,
                         ],

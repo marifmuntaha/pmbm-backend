@@ -35,8 +35,6 @@ class StudentVerificationObserver
             try {
                 if ($studentProgram) {
                     $registrationService = new RegistrationProofService();
-                    $certificateService = new CertificateService();
-                    $tcpdfService = new TcpdfService();
 
                     // Generate registration number if not exists
                     if (!$studentProgram->registration_number) {
@@ -44,9 +42,7 @@ class StudentVerificationObserver
                     }
 
                     $data = $registrationService->getRegistrationProofData($studentProgram, env('FRONTEND_URL', 'http://localhost:3000'));
-                    $tempPdfPath = $registrationService->generatePdfFile($data);
-                    
-                    $registrationProofPath = $tempPdfPath;
+                    $registrationProofPath = $registrationService->generateSignedPdfFile($data, $studentProgram->institution);
                 }
             } catch (\Exception $e) {
                 Log::error('Gagal generate PDF bukti pendaftaran saat verifikasi selesai: ' . $e->getMessage());

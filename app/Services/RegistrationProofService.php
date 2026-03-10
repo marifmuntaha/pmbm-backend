@@ -10,6 +10,7 @@ use App\Models\Student\StudentFile;
 use App\Models\Institution;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
 
@@ -247,5 +248,50 @@ class RegistrationProofService
         file_put_contents($tempPath, $dompdf->output());
 
         return $tempPath;
+    }
+
+    /**
+     * Generate signed PDF file
+     */
+    public function generateSignedPdfFile(array $data, \App\Models\Institution $institution): string
+    {
+        $pdfPath = $this->generatePdfFile($data);
+
+        try {
+            $certificateService = new CertificateService();
+            $tcpdfService = new TcpdfService();
+
+            $certificatePath = $certificateService->getCertificateForInstitution($institution, 'headmaster');
+            $certificatePassword = $certificateService->getCertificatePassword();
+
+            $registrationNumber = $data['registration_number'] ?? uniqid();
+            $signedFilename = 'bukti-pendaftaran-' . $registrationNumber . '.pdf';
+            $signedPath = storage_path('app/temp/' . $signedFilename);
+
+            $tcpdfService->signExistingPdfToFile(
+                $pdfPath,
+                $signedPath,
+                $certificatePath,
+                $certificatePassword,
+                [
+                    'author' => 'Kepala Madrasah',
+                    'title' => 'Bukti Pendaftaran Murid Baru',
+                    'name' => $institution->head ?? 'Kepala Lembaga',
+                    'reason' => 'Bukti Pendaftaran Murid Baru'
+                ]
+            );
+
+            // Cleanup unsigned PDF
+            if (file_exists($pdfPath)) {
+                @unlink($pdfPath);
+            }
+
+            return $signedPath;
+
+        } catch (\Exception $e) {
+            \Log::error('Failed to sign registration proof', ['error' => $e->getMessage()]);
+            // Return unsigned path as fallback
+            return $pdfPath;
+        }
     }
 }
