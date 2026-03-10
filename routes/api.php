@@ -134,5 +134,6 @@ Route::prefix('v1')->group(callback: function () {
 
     Route::post('/callback/{provider}', [PaymentController::class, 'callback']);
     Route::get('/verify-receipt/{token}', [PaymentController::class, 'verifyReceipt']);
+    Route::get('/verify-registration/{token}', [StudentController::class, 'verifyRegistration']);
     Route::get('/student/verify/{token}', [StudentController::class, 'verifyRegistrationProof']);
 });
