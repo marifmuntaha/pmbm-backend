@@ -230,6 +230,11 @@ class PaymentController extends Controller
                 Gateway::where('id', '!=', $id)->update(['is_active' => false]);
             }
 
+            // Convert mode string to integer if present
+            if (isset($validated['mode'])) {
+                $validated['mode'] = ($validated['mode'] === 'production') ? 2 : 1;
+            }
+
             $gateway->update($validated);
 
             return response([
