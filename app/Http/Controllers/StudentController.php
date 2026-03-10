@@ -15,6 +15,8 @@ use App\Services\CertificateService;
 use App\Services\RegistrationProofService;
 use App\Services\TcpdfService;
 use Exception;
+use App\Jobs\SendWhatsAppMessage;
+use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
@@ -175,6 +177,76 @@ class StudentController extends Controller
             return response([
                 'status' => 'error',
                 'statusMessage' => $e->getMessage(),
+            ], 500);
+        }
+    }
+    public function sendWhatsAppRegistrationProof(Request $request, $userId)
+    {
+        try {
+            $userId = $request->user()->id;
+            $studentProgram = StudentProgram::with([
+                'personal',
+                'parent',
+                'address',
+                'program',
+                'boarding',
+                'institution',
+                'file'
+            ])->where('userId', $userId)->first();
+
+            if (!$studentProgram) {
+                return response()->json([
+                    'status' => 'error',
+                    'statusMessage' => 'Data pendaftaran tidak ditemukan.'
+                ], 404);
+            }
+
+            if (!$studentProgram->personal || !$studentProgram->parent || !$studentProgram->program) {
+                return response()->json([
+                    'status' => 'error',
+                    'statusMessage' => 'Data pendaftaran belum lengkap. Mohon lengkapi data terlebih dahulu.'
+                ], 400);
+            }
+
+            $registrationService = new RegistrationProofService();
+
+            if (!$studentProgram->registration_number) {
+                $studentProgram = $registrationService->generateRegistrationProof($studentProgram);
+            }
+
+            $data = $registrationService->getRegistrationProofData($studentProgram, $request->query('frontend_url'));
+            $signedPath = $registrationService->generateSignedPdfFile($data, $studentProgram->institution);
+
+            $filename = 'bukti-pembayaran-' . ($studentProgram->registration_number ?? $userId) . '.pdf';
+
+            // Get user's phone number
+            $user = User::find($userId);
+            $phoneNumber = $user->phone;
+
+            if (!$phoneNumber) {
+                return response()->json([
+                    'status' => 'error',
+                    'statusMessage' => 'Nomor telepon pengguna tidak ditemukan.'
+                ], 400);
+            }
+
+            // Dispatch job to send WhatsApp message with the PDF
+            SendWhatsAppMessage::dispatch($phoneNumber, 'Bukti Pendaftaran Anda', $signedPath, $filename);
+
+            return response()->json([
+                'status' => 'success',
+                'statusMessage' => 'Bukti pendaftaran berhasil dikirim ke WhatsApp Anda.'
+            ]);
+
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'status' => 'error',
+                'statusMessage' => 'Data pendaftaran tidak ditemukan.'
+            ], 404);
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'statusMessage' => 'Terjadi kesalahan: ' . $e->getMessage()
             ], 500);
         }
     }
