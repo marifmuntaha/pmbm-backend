@@ -183,7 +183,7 @@ class StudentController extends Controller
     public function sendWhatsAppRegistrationProof(Request $request, $userId)
     {
         try {
-            $userId = $request->user()->id;
+            // $userId is passed as a parameter from the route
             $studentProgram = StudentProgram::with([
                 'personal',
                 'parent',
@@ -201,10 +201,10 @@ class StudentController extends Controller
                 ], 404);
             }
 
-            if (!$studentProgram->personal || !$studentProgram->parent || !$studentProgram->program) {
+            if (!$studentProgram->personal || !$studentProgram->parent || !$studentProgram->program || !$studentProgram->institution) {
                 return response()->json([
                     'status' => 'error',
-                    'statusMessage' => 'Data pendaftaran belum lengkap. Mohon lengkapi data terlebih dahulu.'
+                    'statusMessage' => 'Data pendaftaran belum lengkap. Mohon lengkapi data pendaftaran dan lembaga terlebih dahulu.'
                 ], 400);
             }
 
@@ -221,6 +221,13 @@ class StudentController extends Controller
 
             // Get user's phone number
             $user = User::find($userId);
+            if (!$user) {
+                return response()->json([
+                    'status' => 'error',
+                    'statusMessage' => 'Pengguna tidak ditemukan.'
+                ], 404);
+            }
+            
             $phoneNumber = $user->phone;
 
             if (!$phoneNumber) {
