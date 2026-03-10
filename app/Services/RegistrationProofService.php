@@ -84,9 +84,9 @@ class RegistrationProofService
         $files = StudentFile::where('userId', $studentProgram->userId)->first();
 
 
-        // Generate verification URL - use frontend URL from request or fallback to env
+        // Generate verification URL - use frontend URL from request or fallback to config
         if (!$frontendUrl) {
-            $frontendUrl = env('FRONTEND_URL', request()->getSchemeAndHttpHost());
+            $frontendUrl = config('app.frontend_url', request()->getSchemeAndHttpHost());
         }
 
         // Clean the frontend URL - remove query strings and fragments

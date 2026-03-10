@@ -120,9 +120,9 @@ class PaymentReceiptService
     {
         $payment->load(['user', 'personal', 'institution', 'invoice']);
 
-        // Use frontend URL if provided, fallback to env
+        // Use frontend URL if provided, fallback to config
         if (!$frontendUrl) {
-            $frontendUrl = env('FRONTEND_URL', request()->getSchemeAndHttpHost());
+            $frontendUrl = config('app.frontend_url', request()->getSchemeAndHttpHost());
         }
 
         // Clean the frontend URL
