@@ -305,7 +305,7 @@ class PaymentController extends Controller
 
             // Generate signed PDF
             $signedPath = $receiptService->generateSignedPdfFile($data);
-            $filename = 'receipt-' . ($payment->receipt_number ?? $id) . '.pdf';
+            $filename = 'bukti-pembayaran-' . ($payment->receipt_number ?? $id) . '.pdf';
 
             // Return the signed PDF as a response
             $response = response()->download($signedPath, $filename)->deleteFileAfterSend(true);

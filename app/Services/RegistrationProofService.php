@@ -84,9 +84,9 @@ class RegistrationProofService
         $files = StudentFile::where('userId', $studentProgram->userId)->first();
 
 
-        // Generate verification URL - use frontend URL from request or fallback to env
+        // Generate verification URL - use frontend URL from request or fallback to current host
         if (!$frontendUrl) {
-            $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
+            $frontendUrl = request()->getSchemeAndHttpHost();
         }
 
         // Clean the frontend URL - remove query strings and fragments
@@ -149,7 +149,7 @@ class RegistrationProofService
                 'nisn' => $studentProgram->personal->nisn ?? '-',
                 'nik' => $studentProgram->personal->nik ?? '-',
                 'birthPlace' => $studentProgram->personal->birthPlace ?? '-',
-                'birthDate' => $studentProgram->personal->birthDate ?? '-',
+                'birthDate' => $studentProgram->personal->birthDate ? \Carbon\Carbon::parse($studentProgram->personal->birthDate)->translatedFormat('d M Y') : '-',
                 'gender' => $studentProgram->personal->gender == 1 ? 'Laki-laki' : 'Perempuan',
                 'guardName' => $studentProgram->parent->guardName ?? '-',
                 'phone' => $studentProgram->parent->guardPhone ?? '-',
@@ -161,7 +161,7 @@ class RegistrationProofService
             'photo_base64' => $photoBase64,
             'qr_code' => $qrCode,
             'verify_url' => $verifyUrl,
-            'generated_at' => $studentProgram->registration_generated_at,
+            'generated_at' => $studentProgram->registration_generated_at ? \Carbon\Carbon::parse($studentProgram->registration_generated_at)->translatedFormat('d M Y') : '-',
         ];
     }
 
@@ -265,7 +265,7 @@ class RegistrationProofService
             $certificatePassword = $certificateService->getCertificatePassword();
 
             $registrationNumber = $data['registration_number'] ?? uniqid();
-            $signedFilename = 'bukti-pendaftaran-' . $registrationNumber . '.pdf';
+            $signedFilename = 'bukti-pembayaran-' . $registrationNumber . '.pdf';
             $signedPath = storage_path('app/temp/' . $signedFilename);
 
             $tcpdfService->signExistingPdfToFile(

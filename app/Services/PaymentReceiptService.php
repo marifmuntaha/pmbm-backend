@@ -120,10 +120,9 @@ class PaymentReceiptService
     {
         $payment->load(['user', 'personal', 'institution', 'invoice']);
 
-        // Use frontend URL if provided, fallback to APP_URL (though usually backend)
-        // For production, this should ideally be FRONTEND_URL
+        // Use frontend URL if provided, fallback to current request host
         if (!$frontendUrl) {
-            $frontendUrl = env('FRONTEND_URL', env('APP_URL', 'http://localhost:3000'));
+            $frontendUrl = request()->getSchemeAndHttpHost();
         }
 
         // Clean the frontend URL
@@ -223,9 +222,9 @@ class PaymentReceiptService
             'program_name' => $programName,
             'invoice_reference' => $payment->invoice->reference ?? 'N/A',
             'receipt_number' => $payment->receipt_number,
-            'receipt_date' => $payment->receipt_generated_at,
+            'receipt_date' => $payment->receipt_generated_at ? \Carbon\Carbon::parse($payment->receipt_generated_at)->translatedFormat('d M Y') : '-',
             'transaction_date' => Carbon::parse($payment->transaction_time)->format('d/m/Y H:i'),
-            'payment_date' => Carbon::parse($payment->transaction_time)->format('d F Y, H:i') . ' WIB',
+            'payment_date' => Carbon::parse($payment->transaction_time)->translatedFormat('d M Y, H:i') . ' WIB',
             'transaction_id' => $payment->transaction_id,
             'payment_method' => $payment->method == 1 ? 'Tunai' : 'Online',
             'amount' => 'Rp ' . number_format($payment->amount, 0, ',', '.'),
@@ -235,7 +234,7 @@ class PaymentReceiptService
             'verify_url' => $verifyUrl,
             'signature_name' => $signatureName,
             'signature_location' => 'Jepara',
-            'signature_date' => Carbon::now()->format('d F Y'),
+            'signature_date' => Carbon::now()->translatedFormat('d M Y'),
             'lock_icon_path' => public_path('assets/images/lock-verified.png'),
         ];
     }
@@ -304,7 +303,7 @@ class PaymentReceiptService
             $certificatePassword = $certificateService->getCertificatePassword();
 
             $studentName = isset($data['student_name']) && $data['student_name'] !== 'N/A' ? \Illuminate\Support\Str::slug($data['student_name']) : \Illuminate\Support\Str::random(10);
-            $signedFilename = 'receipt-' . ($payment->receipt_number ?? $studentName) . '.pdf';
+            $signedFilename = 'bukti-pembayaran-' . ($payment->receipt_number ?? $studentName) . '.pdf';
             $signedPath = storage_path('app/temp/' . $signedFilename);
 
             $tcpdfService->signExistingPdfToFile(
