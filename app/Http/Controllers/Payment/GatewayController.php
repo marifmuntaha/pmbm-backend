@@ -29,7 +29,26 @@ class GatewayController extends Controller
     public function update(UpdateGatewayRequest $request, Gateway $gateway)
     {
         try {
-            return $gateway->update(array_filter($request->all))
+            $data = $request->validated();
+
+            // Handle is_active boolean conversion
+            if (isset($data['is_active'])) {
+                $data['is_active'] = filter_var($data['is_active'], FILTER_VALIDATE_BOOLEAN);
+                if ($data['is_active']) {
+                    Gateway::where('id', '!=', $gateway->id)->update(['is_active' => false]);
+                }
+            }
+
+            // Handle mode conversion (string to integer)
+            if (isset($data['mode'])) {
+                if ($data['mode'] === 'production') {
+                    $data['mode'] = 2;
+                } elseif ($data['mode'] === 'sandbox') {
+                    $data['mode'] = 1;
+                }
+            }
+
+            return $gateway->update($data)
             ? response([
                 'status' => 'success',
                 'messageStatus' => '',

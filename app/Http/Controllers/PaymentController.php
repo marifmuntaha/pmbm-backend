@@ -206,49 +206,6 @@ class PaymentController extends Controller
             ], 500);
         }
     }
-    public function updateGateway(Request $request, $id)
-    {
-        try {
-            $validated = $request->validate([
-                'is_active' => 'sometimes|in:0,1,true,false',
-                'mode' => 'sometimes|in:sandbox,production',
-                'server_key' => 'nullable|string',
-                'client_key' => 'nullable|string',
-                'secret_key' => 'nullable|string',
-                'callback_token' => 'nullable|string',
-            ]);
-
-            $gateway = Gateway::findOrFail($id);
-
-            // Convert is_active to boolean if present
-            if (isset($validated['is_active'])) {
-                $validated['is_active'] = filter_var($validated['is_active'], FILTER_VALIDATE_BOOLEAN);
-            }
-
-            // If setting active, deactivate others
-            if (isset($validated['is_active']) && $validated['is_active']) {
-                Gateway::where('id', '!=', $id)->update(['is_active' => false]);
-            }
-
-            // Convert mode string to integer if present
-            if (isset($validated['mode'])) {
-                $validated['mode'] = ($validated['mode'] === 'production') ? 2 : 1;
-            }
-
-            $gateway->update($validated);
-
-            return response([
-                'status' => 'success',
-                'statusMessage' => 'Pengaturan payment gateway berhasil diperbarui.',
-                'result' => $gateway
-            ]);
-        } catch (Exception $e) {
-             return response([
-                'status' => 'error',
-                'statusMessage' => $e->getMessage()
-            ], 500);
-        }
-    }
     public function cash(Request $request)
     {
         try {

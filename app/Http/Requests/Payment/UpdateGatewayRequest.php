@@ -14,7 +14,7 @@ class UpdateGatewayRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -26,7 +26,7 @@ class UpdateGatewayRequest extends FormRequest
     {
         return [
             'is_active' => 'sometimes|in:0,1,true,false',
-            'mode' => 'sometimes|in:sandbox,production',
+            'mode' => 'sometimes|in:1,2,sandbox,production',
             'server_key' => 'nullable|string',
             'client_key' => 'nullable|string',
             'secret_key' => 'nullable|string',

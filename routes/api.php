@@ -80,6 +80,7 @@ Route::prefix('v1')->group(callback: function () {
         Route::post('invoice/{invoice}/send-whatsapp', [InvoiceController::class, 'sendWhatsapp']);
         Route::apiResource('invoice', InvoiceController::class);
         Route::prefix('payment')->group(function () {
+            Route::get('active-gateway', [\App\Http\Controllers\Payment\ActiveGatewayController::class, 'index']);
             Route::post('cash', [PaymentController::class, 'cash']);
             Route::get('download-all-receipts', [PaymentController::class, 'downloadAllReceipts']);
             Route::get('{id}/generate-receipt', [PaymentController::class, 'generateReceipt']);
