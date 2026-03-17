@@ -265,7 +265,7 @@ class RegistrationProofService
             $certificatePassword = $certificateService->getCertificatePassword();
 
             $registrationNumber = $data['registration_number'] ?? uniqid();
-            $signedFilename = 'bukti-pembayaran-' . $registrationNumber . '.pdf';
+            $signedFilename = 'bukti-pendaftaran-' . $registrationNumber . '.pdf';
             $signedPath = storage_path('app/temp/' . $signedFilename);
 
             $tcpdfService->signExistingPdfToFile(

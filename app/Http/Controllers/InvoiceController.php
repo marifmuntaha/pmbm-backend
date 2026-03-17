@@ -164,6 +164,7 @@ class InvoiceController extends Controller
             $paymentLink = rtrim($token ? $service->getRedirectUrl($token) : '');
 
             $message = "*PMBM YAYASAN DARUL HIKMAH*" . PHP_EOL . PHP_EOL;
+            $message .= "ini adalah pesan otomatis dari sistem" . PHP_EOL . PHP_EOL;
             $message .= "Halo, {$user->personal->name}." . PHP_EOL;
             $message .= "Ini adalah pesan pengingat tagihan Anda." . PHP_EOL . PHP_EOL;
             $message .= "Jumlah Tagihan: *Rp. " . number_format($invoice->amount, 0, ',', '.') . "*." . PHP_EOL;

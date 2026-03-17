@@ -75,7 +75,6 @@ class InvoiceObserver
                 $paymentLink = $result['redirect_url'] ?? '';
 
                 if (!empty($result['token'])) {
-                    // Simpan token ke dalam database tanpa memicu endless observer loop
                     Invoice::where('id', $invoice->id)->update(['link' => $result['token']]);
                 }
             } catch (Exception $e) {
@@ -83,10 +82,10 @@ class InvoiceObserver
                     'invoiceId' => $invoice->id,
                     'error' => $e->getMessage()
                 ]);
-                // Tetap kirim WA meskipun gagal buat link
             }
 
             $message = "*PMBM YAYASAN DARUL HIKMAH*" . PHP_EOL . PHP_EOL;
+            $message .= "ini adalah pesan otomatis dari sistem." . PHP_EOL . PHP_EOL;
             $message .= "Halo, {$user->personal->name}." . PHP_EOL;
             $message .= "Pendaftaran Anda telah terverifikasi." . PHP_EOL . PHP_EOL;
             $message .= "Tagihan sebesar *Rp. " . number_format($invoice->amount, 0, ',', '.') . "* telah dibuat." . PHP_EOL;

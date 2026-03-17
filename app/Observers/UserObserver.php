@@ -68,6 +68,7 @@ class UserObserver
     private function message(User $user) : string
     {
         $message = "*PMBM YAYASAN DARUL HIKMAH*". PHP_EOL . PHP_EOL;
+        $message .= "ini adalah pesan otomatis dari sistem." . PHP_EOL . PHP_EOL;
         $message .= "Selamat bergabung, $user->name." . PHP_EOL;
         $message .= "Nama Pengguna anda adalah: ". $user->email . PHP_EOL;
         $message .= "Kata Sandi adalah: " . Crypt::decryptString($user->password) . PHP_EOL;

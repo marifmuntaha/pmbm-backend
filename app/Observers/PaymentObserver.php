@@ -26,6 +26,7 @@ class PaymentObserver
                 $receiptPath = $paymentReceiptService->generateSignedPdfFile($receiptData);
 
                 $message = "*PMBM YAYASAN DARUL HIKMAH*" . PHP_EOL . PHP_EOL;
+                $message .= "ini adalah pesan otomatis dari sistem" . PHP_EOL . PHP_EOL;
                 $message .= "Halo, {$user->personal->name}." . PHP_EOL;
                 $message .= "Pembayaran Anda sebesar *Rp. " . number_format($payment->amount) . "* telah kami terima." . PHP_EOL . PHP_EOL;
                 $message .= "Metode: " . ($payment->method == 1 ? 'Cash / Tunai' : 'Online Transfer') . PHP_EOL;
@@ -91,6 +92,7 @@ class PaymentObserver
                     }
 
                     $reminder = "*PMBM YAYASAN DARUL HIKMAH*" . PHP_EOL . PHP_EOL;
+                    $reminder .= "ini adalah pesan otomatis dari sistem" . PHP_EOL . PHP_EOL;
                     $reminder .= "Pembayaran Anda telah kami catat, namun tagihan Anda belum lunas." . PHP_EOL;
                     $reminder .= "Sisa tagihan yang harus dibayarkan adalah sebesar *Rp. " . number_format($sisaTagihan, 0, ',', '.') . "*." . PHP_EOL . PHP_EOL;
 

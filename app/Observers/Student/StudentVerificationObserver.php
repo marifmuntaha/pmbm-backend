@@ -22,6 +22,7 @@ class StudentVerificationObserver
         if ($user) {
             $registrationProofPath = null;
             $caption = '*PMBM YAYASAN DARUL HIKMAH*'. PHP_EOL . PHP_EOL;
+            $caption .= "ini adalah pesan otomatis dari sistem." . PHP_EOL . PHP_EOL;
             $caption .= 'Selamat, berkas pendaftaran Anda telah lengkap.'. PHP_EOL;
             $caption .= 'admin akan memferifikasi pendaftaran anda, setelah itu kami akan mengirimkan pemberitahuan & tagihan untuk pembayaran.'. PHP_EOL . PHP_EOL;
             $caption .= 'Terlampir adalah bukti pendaftaran Anda.'. PHP_EOL . PHP_EOL;
@@ -68,6 +69,7 @@ class StudentVerificationObserver
 
                 if ($treasure && $treasure->phone) {
                     $message = '*PMBM YAYASAN DARUL HIKMAH*' . PHP_EOL . PHP_EOL;
+                    $message .= "ini adalah pesan otomatis dari sistem" . PHP_EOL . PHP_EOL;
                     $message .= 'Pendaftaran siswa baru atas nama ' . $user->name . ' telah diverifikasi.' . PHP_EOL;
                     $message .= 'Silahkan melakukan generate tagihan.' . PHP_EOL;
                     $message .= 'Terima kasih.' . PHP_EOL;
