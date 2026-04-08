@@ -64,21 +64,8 @@ class RuleController extends Controller
             $request->validate([
                 'content' => 'required|string',
             ]);
-
-            $user = Auth::user();
-            $data = $request->only('content');
-            $data['createdBy'] = $user->id;
-
-            if ((int)$user->role === 3) {
-                 if (!$user->institutionId) {
-                     throw new Exception("Operator tidak memiliki data lembaga.");
-                 }
-                 $data['institutionId'] = $user->institutionId;
-            } else {
-                // Admin adds General Rule (institutionId = null)
-                $data['institutionId'] = null;
-            }
-
+                         
+            $data = $request->only(['content', 'institutionId']);
             $rule = Rule::create($data);
 
             return response([

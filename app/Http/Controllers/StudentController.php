@@ -84,10 +84,11 @@ class StudentController extends Controller
                     'name' => $item['personal']['name'],
                     'birthPlace' => $item['personal']['birthPlace'],
                     'birthDate' => $item['personal']['birthDate'],
-                    'guardName' => $item['parent']['guardName'],
+                    'guardName' => $item['parent']['guardName'] ?? '-',
                     'address' => $item['address']['street'],
                     'program' => $item['program']['name'],
                     'boarding' => $item['boarding']['name'],
+                    'verification' => $item['verification']['id'] ?? null
                 ];
             });
             return response([

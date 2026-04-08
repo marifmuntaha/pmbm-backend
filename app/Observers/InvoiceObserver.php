@@ -2,7 +2,9 @@
 
 namespace App\Observers;
 
+use App\Models\Institution;
 use App\Models\Invoice;
+use App\Models\Master\Year;
 use App\Models\User;
 use App\Jobs\SendWhatsAppMessage;
 use App\Services\LogService;
@@ -83,21 +85,27 @@ class InvoiceObserver
                     'error' => $e->getMessage()
                 ]);
             }
-
-            $message = "*PMBM YAYASAN DARUL HIKMAH*" . PHP_EOL . PHP_EOL;
+            $institution = Institution::find($invoice->institutionId);
+            $year = Year::find($invoice->yearId);
+            $institutionName = $institution ? $institution->surname : 'Yayasan Darul Hikmah Menganti';
+            $yearName = $year ? $year->name : '2026/2027';
+            $message = "YAYASAN DARUL HIKMAH" . PHP_EOL . PHP_EOL;
+            $message .= "Assalamualaikum wr wb." . PHP_EOL;
             $message .= "ini adalah pesan otomatis dari sistem." . PHP_EOL . PHP_EOL;
             $message .= "Halo, {$user->personal->name}." . PHP_EOL;
-            $message .= "Pendaftaran Anda telah terverifikasi." . PHP_EOL . PHP_EOL;
-            $message .= "Tagihan sebesar *Rp. " . number_format($invoice->amount, 0, ',', '.') . "* telah dibuat." . PHP_EOL;
+            $message .= "Selamat, anda telah terdaftar sebagai siswa baru {$institutionName} TP {$yearName}." . PHP_EOL;
+            $message .= "Mohon membayar administasi keuangan sebesar Rp. " . number_format($invoice->amount, 0, ',', '.') . ". Pembayaran paling lambat  ....." . PHP_EOL;
             
             if ($paymentLink) {
-                $message .= "Kunjungi tautan berikut untuk melakukan pembayaran:" . PHP_EOL;
-                $message .= $paymentLink . PHP_EOL . PHP_EOL;
+                $message .= "Kunjungi link berikut untuk melakukan pembayaran:" . PHP_EOL;
+                $message .= $paymentLink . PHP_EOL;
             } else {
                 $message .= "Silakan masuk ke aplikasi untuk melakukan pembayaran." . PHP_EOL;
             }
             
-            $message .= "Terima kasih." . PHP_EOL;
+            $message .= "Terima kasih." . PHP_EOL . PHP_EOL;
+            $message .= "Wassalamualaikum wr wb" . PHP_EOL . PHP_EOL;
+            $message .= "-PANITIA PMBM MTs DARUL HIKMAH-" . PHP_EOL;
 
             SendWhatsAppMessage::dispatch($user->phone, $message);
             LogService::log("Tagihan dibuat: Rp. " . number_format($invoice->amount) . " untuk {$user->personal->name}", 'info', [
