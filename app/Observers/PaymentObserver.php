@@ -3,6 +3,7 @@
 namespace App\Observers;
 
 use App\Jobs\SendWhatsAppMessage;
+use App\Models\Institution;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\User;
@@ -24,8 +25,10 @@ class PaymentObserver
                 $payment = $paymentReceiptService->generateReceipt($payment, $user);
                 $receiptData = $paymentReceiptService->getReceiptData($payment);
                 $receiptPath = $paymentReceiptService->generateSignedPdfFile($receiptData);
-
+                $institution = Institution::find($payment->institutionId);
+                $institutionName = $institution ? $institution->surname : 'Yayasan Darul Hikmah Menganti';
                 $message = "*PMBM YAYASAN DARUL HIKMAH*" . PHP_EOL . PHP_EOL;
+                $message .= "Assalamualaikum wr wb." . PHP_EOL;
                 $message .= "ini adalah pesan otomatis dari sistem" . PHP_EOL . PHP_EOL;
                 $message .= "Halo, {$user->personal->name}." . PHP_EOL;
                 $message .= "Pembayaran Anda sebesar *Rp. " . number_format($payment->amount) . "* telah kami terima." . PHP_EOL . PHP_EOL;
@@ -33,7 +36,10 @@ class PaymentObserver
                 $message .= "ID Transaksi: {$payment->transaction_id}" . PHP_EOL;
                 $message .= "Waktu: {$payment->transaction_time}" . PHP_EOL . PHP_EOL;
                 $message .= "Terlampir adalah bukti pembayaran Anda." . PHP_EOL . PHP_EOL;
-                $message .= "Terima kasih telah melakukan pembayaran. Silakan cek status pendaftaran Anda di aplikasi." . PHP_EOL;
+                $message .= "Terima kasih telah melakukan pembayaran. Silakan cek status pendaftaran Anda di aplikasi." . PHP_EOL . PHP_EOL;
+
+                $message .= "Wassalamualaikum wr wb" . PHP_EOL . PHP_EOL;
+                $message .= "-Panitia PMBM {$institutionName}-" . PHP_EOL;
 
                 SendWhatsAppMessage::dispatch($user->phone, $message, null, $message, $receiptPath);
                 LogService::transaction("Pembayaran diterima: Rp. " . number_format($payment->amount) . " dari {$user->personal->name}", [
@@ -91,7 +97,10 @@ class PaymentObserver
                         ]);
                     }
 
+                    $institution = Institution::find($payment->institutionId);
+                    $institutionName = $institution ? $institution->surname : 'Yayasan Darul Hikmah Menganti';
                     $reminder = "*PMBM YAYASAN DARUL HIKMAH*" . PHP_EOL . PHP_EOL;
+                    $reminder .= "Assalamualaikum wr wb." . PHP_EOL;
                     $reminder .= "ini adalah pesan otomatis dari sistem" . PHP_EOL . PHP_EOL;
                     $reminder .= "Pembayaran Anda telah kami catat, namun tagihan Anda belum lunas." . PHP_EOL;
                     $reminder .= "Sisa tagihan yang harus dibayarkan adalah sebesar *Rp. " . number_format($sisaTagihan, 0, ',', '.') . "*." . PHP_EOL . PHP_EOL;
@@ -102,7 +111,9 @@ class PaymentObserver
                     } else {
                         $reminder .= "Silakan masuk ke aplikasi untuk melanjutkan pembayaran sisa tagihan." . PHP_EOL . PHP_EOL;
                     }
-                    $reminder .= "Terima kasih.";
+                    $reminder .= "Terima kasih." . PHP_EOL . PHP_EOL;
+                    $reminder .= "Wassalamualaikum wr wb" . PHP_EOL . PHP_EOL;
+                    $reminder .= "-Panitia PMBM {$institutionName}-" . PHP_EOL;
 
                     SendWhatsAppMessage::dispatch($user->phone, $reminder);
                 }

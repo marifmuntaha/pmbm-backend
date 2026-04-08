@@ -158,7 +158,7 @@ class StudentController extends Controller
                 return [
                     'userId' => $item['personal']['userId'],
                     'name' => $item['personal']['name'],
-                    'guardName' => $item['parent']['guardName'],
+                    'guardName' => $item['parent']['guardName'] ?? "-",
                     'address' => $item['address']['street'],
                     'gender' => $item['personal']['gender'],
                     'programId' => $item['programId'],

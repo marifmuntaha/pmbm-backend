@@ -11,14 +11,14 @@ class WhatsAppService
     protected string $url;
     protected string $user;
     protected string $pass;
-    protected string $key;
+    protected string $deviceId;
 
     public function __construct()
     {
         $this->url = config('whatsapp.url');
         $this->user = config('whatsapp.user');
         $this->pass = config('whatsapp.pass');
-        $this->key = config('whatsapp.key', ''); // Ensure key is safe
+        $this->deviceId = config('whatsapp.device_id', '');
     }
 
     /**
@@ -36,18 +36,50 @@ class WhatsAppService
         return $cleaned;
     }
 
-    public function sendTyping(string $phone, string $action) : void
+    /**
+     * Get default headers for all requests.
+     *
+     * @return array
+     */
+    private function getHeaders(): array
+    {
+        $headers = [
+            'Content-Type' => 'application/json',
+        ];
+
+        if (!empty($this->deviceId)) {
+            $headers['X-Device-Id'] = $this->deviceId;
+        }
+
+        return $headers;
+    }
+
+    /**
+     * Get headers for multipart requests (without Content-Type, let HTTP client set it).
+     *
+     * @return array
+     */
+    private function getMultipartHeaders(): array
+    {
+        $headers = [];
+
+        if (!empty($this->deviceId)) {
+            $headers['X-Device-Id'] = $this->deviceId;
+        }
+
+        return $headers;
+    }
+
+    public function sendTyping(string $phone, string $action): void
     {
         try {
-            $response = Http::withHeaders([
-                'Content-Type' => 'application/json',
-            ])->withBasicAuth($this->user, $this->pass)
-                ->post($this->url . "/send/chat-presence", [
+            $response = Http::withHeaders($this->getHeaders())
+                ->withBasicAuth($this->user, $this->pass)
+                ->post("$this->url/send/chat-presence", [
                     'phone' => $this->formatPhone($phone),
                     'action' => $action,
                 ]);
             if ($response->successful()) {
-                $response->json();
                 return;
             }
             Log::error('WhatsApp Service Error: ' . $response->body());
@@ -68,15 +100,13 @@ class WhatsAppService
     public function sendMessage(string $phone, string $message): ?array
     {
         try {
-            $response = Http::withHeaders([
-                'Content-Type' => 'application/json',
-            ])->withBasicAuth($this->user, $this->pass)
+            $response = Http::withHeaders($this->getHeaders())
+                ->withBasicAuth($this->user, $this->pass)
                 ->post("$this->url/send/message", [
                     'phone' => $this->formatPhone($phone),
                     'message' => $message,
-                    "is_forwarded" => false,
-                    "duration" => 3600
-            ]);
+                    'is_forwarded' => false,
+                ]);
 
             if ($response->successful()) {
                 return [
@@ -109,14 +139,17 @@ class WhatsAppService
     public function sendImage(string $phone, string $imageUrl, string $caption = ''): ?array
     {
         try {
-            $response = Http::withHeaders([
-                'x-api-key' => $this->key,
-            ])->withBasicAuth($this->user, $this->pass)
+            $response = Http::withHeaders($this->getMultipartHeaders())
+                ->withBasicAuth($this->user, $this->pass)
+                ->asMultipart()
                 ->post("$this->url/send/image", [
-                'phone' => $this->formatPhone($phone),
-                'image' => $imageUrl,
-                'caption' => $caption,
-            ]);
+                    ['name' => 'phone', 'contents' => $this->formatPhone($phone)],
+                    ['name' => 'caption', 'contents' => $caption],
+                    ['name' => 'image_url', 'contents' => $imageUrl],
+                    ['name' => 'view_once', 'contents' => 'false'],
+                    ['name' => 'compress', 'contents' => 'false'],
+                    ['name' => 'is_forwarded', 'contents' => 'false'],
+                ]);
 
             if ($response->successful()) {
                 return [
@@ -137,6 +170,7 @@ class WhatsAppService
             return null;
         }
     }
+
     /**
      * Send a document/file via WhatsApp.
      *
@@ -148,7 +182,8 @@ class WhatsAppService
     public function sendFile(string $phone, string $filePath, string $caption = ''): ?array
     {
         try {
-            $response = Http::withBasicAuth($this->user, $this->pass)
+            $response = Http::withHeaders($this->getMultipartHeaders())
+                ->withBasicAuth($this->user, $this->pass)
                 ->attach(
                     'file',
                     file_get_contents($filePath),

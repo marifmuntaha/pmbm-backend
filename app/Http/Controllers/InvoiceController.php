@@ -6,12 +6,14 @@ use App\Http\Requests\StoreInvoiceRequest;
 use App\Http\Requests\UpdateInvoiceRequest;
 use App\Http\Resources\InvoiceResource;
 use App\Jobs\SendWhatsAppMessage;
+use App\Models\Institution;
 use App\Models\Invoice;
 use App\Models\User;
 use App\Services\Payment\PaymentFactory;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+
 
 class InvoiceController extends Controller
 {
@@ -162,12 +164,15 @@ class InvoiceController extends Controller
             }
 
             $paymentLink = rtrim($token ? $service->getRedirectUrl($token) : '');
-
+            $institution = Institution::find($invoice->institutionId);
+            $institutionName = $institution ? $institution->surname : 'Yayasan Darul Hikmah Menganti';
             $message = "*PMBM YAYASAN DARUL HIKMAH*" . PHP_EOL . PHP_EOL;
+            $message .="Asslamaualikum wr.wb" . PHP_EOL;
             $message .= "ini adalah pesan otomatis dari sistem" . PHP_EOL . PHP_EOL;
             $message .= "Halo, {$user->personal->name}." . PHP_EOL;
             $message .= "Ini adalah pesan pengingat tagihan Anda." . PHP_EOL . PHP_EOL;
             $message .= "Jumlah Tagihan: *Rp. " . number_format($invoice->amount, 0, ',', '.') . "*." . PHP_EOL;
+            $message .= "Pembayaran paling lambat  03 Juli 2026" . PHP_EOL;
 
             if ($paymentLink) {
                 $message .= "Kunjungi tautan berikut untuk melakukan pembayaran:" . PHP_EOL;
@@ -176,7 +181,9 @@ class InvoiceController extends Controller
                 $message .= "Silakan masuk ke aplikasi untuk melakukan pembayaran." . PHP_EOL;
             }
 
-            $message .= "Terima kasih." . PHP_EOL;
+            $message .= "Terima kasih." . PHP_EOL . PHP_EOL;
+            $message .= "Wassalamualaikum wr wb" . PHP_EOL . PHP_EOL;
+            $message .= "-PANITIA PMBM {$institutionName}-" . PHP_EOL;
 
             SendWhatsAppMessage::dispatch($user->phone, $message);
 

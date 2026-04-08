@@ -94,7 +94,7 @@ class InvoiceObserver
             $message .= "ini adalah pesan otomatis dari sistem." . PHP_EOL . PHP_EOL;
             $message .= "Halo, {$user->personal->name}." . PHP_EOL;
             $message .= "Selamat, anda telah terdaftar sebagai siswa baru {$institutionName} TP {$yearName}." . PHP_EOL;
-            $message .= "Mohon membayar administasi keuangan sebesar Rp. " . number_format($invoice->amount, 0, ',', '.') . ". Pembayaran paling lambat  ....." . PHP_EOL;
+            $message .= "Mohon membayar administasi keuangan sebesar Rp. " . number_format($invoice->amount, 0, ',', '.') . ". Pembayaran paling lambat  03 Juli 2026" . PHP_EOL;
             
             if ($paymentLink) {
                 $message .= "Kunjungi link berikut untuk melakukan pembayaran:" . PHP_EOL;
@@ -105,7 +105,7 @@ class InvoiceObserver
             
             $message .= "Terima kasih." . PHP_EOL . PHP_EOL;
             $message .= "Wassalamualaikum wr wb" . PHP_EOL . PHP_EOL;
-            $message .= "-PANITIA PMBM MTs DARUL HIKMAH-" . PHP_EOL;
+            $message .= "-Panitia PMBM {$institutionName}-" . PHP_EOL;
 
             SendWhatsAppMessage::dispatch($user->phone, $message);
             LogService::log("Tagihan dibuat: Rp. " . number_format($invoice->amount) . " untuk {$user->personal->name}", 'info', [
