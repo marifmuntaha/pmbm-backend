@@ -32,6 +32,7 @@ use App\Http\Controllers\TestimonyController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\System\IntegrationTestController;
 use App\Http\Controllers\System\LogController;
+use App\Http\Controllers\WhatsappController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -90,6 +91,7 @@ Route::prefix('v1')->group(callback: function () {
         Route::apiResource('announcement', AnnouncementController::class);
         Route::apiResource('payment', PaymentController::class);
         Route::apiResource('user', UserController::class);
+        Route::apiResource('whatsapp', WhatsAppController::class);
     });
     Route::apiResource('schedule', ScheduleController::class);
     Route::apiResource('student', StudentController::class);
@@ -114,7 +116,7 @@ Route::prefix('v1')->group(callback: function () {
         Route::get('/operator/stats', [ReportController::class, 'operatorStats'])->middleware('auth:sanctum');
         Route::get('/admin/stats', [ReportController::class, 'adminStats'])->middleware('auth:sanctum');
     });
-    
+
     Route::prefix('system')->middleware(['auth:sanctum', 'isAdmin'])->group(function () {
         Route::get('logs', [LogController::class, 'index']);
         Route::delete('logs/clear', [LogController::class, 'clear']);

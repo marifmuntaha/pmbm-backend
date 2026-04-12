@@ -70,6 +70,46 @@ class WhatsAppService
         return $headers;
     }
 
+    public function deviceAdd(string $deviceId)
+    {
+        try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->withBasicAuth($this->user, $this->pass)
+                ->post("$this->url/devices", [
+                    'device_id' => $deviceId,
+                ]);
+            if ($response->successful()) {
+                return $response->json();
+            } else {
+                Log::error('WhatsApp Service Error: ' . $response->body());
+                return $response->body();
+            }
+
+        } catch (Exception $e) {
+            Log::error('WhatsApp Service Exception: ' . $e->getMessage());
+            return $e->getMessage();
+        }
+    }
+
+    public function deviceInfo(string $deviceId)
+    {
+        try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->withBasicAuth($this->user, $this->pass)
+                ->get("$this->url/device/{$deviceId}");
+            if ($response->successful()) {
+                return $response->json();
+            } else {
+                Log::error('WhatsApp Service Error: ' . $response->body());
+                return $response->body();
+            }
+
+        } catch (Exception $e) {
+            Log::error('WhatsApp Service Exception: ' . $e->getMessage());
+            return $e->getMessage();
+        }
+    }
+
     public function sendTyping(string $phone, string $action): void
     {
         try {
