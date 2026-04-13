@@ -91,6 +91,7 @@ Route::prefix('v1')->group(callback: function () {
         Route::apiResource('announcement', AnnouncementController::class);
         Route::apiResource('payment', PaymentController::class);
         Route::apiResource('user', UserController::class);
+        Route::post('whatsapp/login', [WhatsappController::class, 'login']);
         Route::apiResource('whatsapp', WhatsAppController::class);
     });
     Route::apiResource('schedule', ScheduleController::class);

@@ -78,12 +78,17 @@ class WhatsappController extends Controller
     public function update(UpdateWhatsappRequest $request, Whatsapp $whatsapp)
     {
         try {
-            return $whatsapp->update($request->all())
-                ? response()->json([
-                    'status' => 'success',
-                    'statusMessage' => 'Data berhasil di update',
-                    'result' => new WhatsappResource($whatsapp)
-                ]) : throw new \Exception('Something went wrong', 500);
+            $apiWhatsapp = new WhatsappService();
+            if ($apiWhatsapp->deviceAdd($request->device)) {
+                return $whatsapp->update($request->all())
+                    ? response()->json([
+                        'status' => 'success',
+                        'statusMessage' => 'Data berhasil di update',
+                        'result' => new WhatsappResource($whatsapp)
+                    ]) : throw new \Exception('Something went wrong', 500);
+            } else {
+                throw new Exception('Whatsapp API tidak terhubung', 500);
+            }
         } catch (\Throwable $th) {
             return response()->json([
                 'status' => 'error',
@@ -95,17 +100,40 @@ class WhatsappController extends Controller
     public function destroy(Whatsapp $whatsapp)
     {
         try {
-            return $whatsapp->destroy($whatsapp->id)
-                ? response()->json([
-                    'status' => 'success',
-                    'statusMessage' => 'Data berhasil dihapus',
-                    'result' => new WhatsappResource($whatsapp)
-                ]) : throw new \Exception('Something went wrong', 500);
+            $apiWhatsapp = new WhatsappService();
+            if ($apiWhatsapp->deviceRemove($whatsapp->device)) {
+                return $whatsapp->destroy($whatsapp->id)
+                    ? response()->json([
+                        'status' => 'success',
+                        'statusMessage' => 'Data berhasil dihapus',
+                        'result' => new WhatsappResource($whatsapp)
+                    ]) : throw new \Exception('Something went wrong', 500);
+            } else {
+                throw new Exception('Whatsapp API tidak terhubung', 500);
+            }
         } catch (\Throwable $th) {
             return response()->json([
                 'status' => 'error',
                 'statusMessage' => $th->getMessage(),
             ], 422);
+        }
+    }
+
+    public function login(Request $request)
+    {
+        try {
+            $apiWhatsapp = new WhatsappService();
+            $response = $apiWhatsapp->deviceLogin($request->device);
+            return response()->json([
+                'status' => 'success',
+                'statusMessage' => '',
+                'result' => $response['results']
+            ]);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'status' => 'error',
+                'statusMessage' => $th->getMessage(),
+            ], 500);
         }
     }
 }

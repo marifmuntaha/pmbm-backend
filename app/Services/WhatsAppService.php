@@ -36,47 +36,26 @@ class WhatsAppService
         return $cleaned;
     }
 
-    /**
-     * Get default headers for all requests.
-     *
-     * @return array
-     */
-    private function getHeaders(): array
+    private function getHeaders(string $device): array
     {
         $headers = [
             'Content-Type' => 'application/json',
         ];
 
-        if (!empty($this->deviceId)) {
-            $headers['X-Device-Id'] = $this->deviceId;
+        if ($device != "") {
+            $headers['X-Device-Id'] = $device;
         }
 
         return $headers;
     }
 
-    /**
-     * Get headers for multipart requests (without Content-Type, let HTTP client set it).
-     *
-     * @return array
-     */
-    private function getMultipartHeaders(): array
-    {
-        $headers = [];
-
-        if (!empty($this->deviceId)) {
-            $headers['X-Device-Id'] = $this->deviceId;
-        }
-
-        return $headers;
-    }
-
-    public function deviceAdd(string $deviceId)
+    public function deviceAdd(string $device)
     {
         try {
-            $response = Http::withHeaders($this->getHeaders())
+            $response = Http::withHeaders($this->getHeaders($device))
                 ->withBasicAuth($this->user, $this->pass)
                 ->post("$this->url/devices", [
-                    'device_id' => $deviceId,
+                    'device_id' => $device,
                 ]);
             if ($response->successful()) {
                 return $response->json();
@@ -91,12 +70,12 @@ class WhatsAppService
         }
     }
 
-    public function deviceInfo(string $deviceId)
+    public function deviceInfo(string $device)
     {
         try {
-            $response = Http::withHeaders($this->getHeaders())
+            $response = Http::withHeaders($this->getHeaders($device))
                 ->withBasicAuth($this->user, $this->pass)
-                ->get("$this->url/device/{$deviceId}");
+                ->get("$this->url/devices/{$device}/status");
             if ($response->successful()) {
                 return $response->json();
             } else {
@@ -108,6 +87,49 @@ class WhatsAppService
             Log::error('WhatsApp Service Exception: ' . $e->getMessage());
             return $e->getMessage();
         }
+    }
+
+    public function deviceRemove(string $device)
+    {
+        try {
+            $response = Http::withHeaders($this->getHeaders($device))
+                ->withBasicAuth($this->user, $this->pass)
+                ->delete("$this->url/devices/{$device}");
+            if ($response->successful()) {
+                return $response->json();
+            } else {
+                Log::error('WhatsApp Service Error: ' . $response->body());
+                return $response->body();
+            }
+
+        } catch (Exception $e) {
+            Log::error('WhatsApp Service Exception: ' . $e->getMessage());
+            return $e->getMessage();
+        }
+    }
+
+    public function deviceLogin(string $device)
+    {
+        try {
+            $response = Http::withHeaders($this->getHeaders($device))
+                ->withBasicAuth($this->user, $this->pass)
+                ->get("$this->url/app/login");
+            if ($response->successful()) {
+                return $response->json();
+            } else {
+                Log::error('WhatsApp Service Error: ' . $response->body());
+                return $response->body();
+            }
+
+        } catch (Exception $e) {
+            Log::error('WhatsApp Service Exception: ' . $e->getMessage());
+            return $e->getMessage();
+        }
+    }
+
+    public function deviceLoginWithCode(string $device, string $code)
+    {
+
     }
 
     public function sendTyping(string $phone, string $action): void
