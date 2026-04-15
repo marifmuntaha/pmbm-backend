@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('whatsapps', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('institutionId');
+            $table->unsignedBigInteger('institutionId')->nullable();
             $table->string('device');
             $table->boolean('active')->default(false);
             $table->enum('status',[1, 2, 3])->default(1)->comment('1. disconnected, 2. logged');

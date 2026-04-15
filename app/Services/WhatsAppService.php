@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\User;
+use App\Models\Whatsapp;
 use Exception;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -49,6 +51,32 @@ class WhatsAppService
         return $headers;
     }
 
+    private function getMultipartHeaders(string $device): array
+    {
+        $headers = [];
+
+        if (!empty($this->deviceId)) {
+            $headers['X-Device-Id'] = $device;
+        }
+
+        return $headers;
+    }
+
+    private function getDeviceId(string $phone): void
+    {
+        $user = User::where('phone', $phone)->first();
+        if ($user->institutionId === null) {
+            $this->deviceId = 'whatsapp-yayasan-1';
+        } else {
+            $whatsapp = Whatsapp::where('institutionId', $user->institutionId)->first();
+            if (!$whatsapp) {
+                $this->deviceId = 'whatsapp-yayasan-1';
+            } else {
+                $this->deviceId = $whatsapp->device;
+            }
+        }
+    }
+
     public function deviceAdd(string $device)
     {
         try {
@@ -75,7 +103,7 @@ class WhatsAppService
         try {
             $response = Http::withHeaders($this->getHeaders($device))
                 ->withBasicAuth($this->user, $this->pass)
-                ->get("$this->url/devices/{$device}/status");
+                ->get("$this->url/devices/$device");
             if ($response->successful()) {
                 return $response->json();
             } else {
@@ -94,7 +122,7 @@ class WhatsAppService
         try {
             $response = Http::withHeaders($this->getHeaders($device))
                 ->withBasicAuth($this->user, $this->pass)
-                ->delete("$this->url/devices/{$device}");
+                ->delete("$this->url/devices/$device");
             if ($response->successful()) {
                 return $response->json();
             } else {
@@ -127,15 +155,11 @@ class WhatsAppService
         }
     }
 
-    public function deviceLoginWithCode(string $device, string $code)
-    {
-
-    }
-
     public function sendTyping(string $phone, string $action): void
     {
         try {
-            $response = Http::withHeaders($this->getHeaders())
+            $this->getDeviceId($phone);
+            $response = Http::withHeaders($this->getHeaders($this->deviceId))
                 ->withBasicAuth($this->user, $this->pass)
                 ->post("$this->url/send/chat-presence", [
                     'phone' => $this->formatPhone($phone),
@@ -152,17 +176,11 @@ class WhatsAppService
         }
     }
 
-    /**
-     * Send a text message via WhatsApp.
-     *
-     * @param string $phone Phone number (with country code, e.g., 628123456789)
-     * @param string $message The message content
-     * @return array|null
-     */
     public function sendMessage(string $phone, string $message): ?array
     {
         try {
-            $response = Http::withHeaders($this->getHeaders())
+            $this->getDeviceId($phone);
+            $response = Http::withHeaders($this->getHeaders($this->deviceId))
                 ->withBasicAuth($this->user, $this->pass)
                 ->post("$this->url/send/message", [
                     'phone' => $this->formatPhone($phone),
@@ -190,18 +208,11 @@ class WhatsAppService
         }
     }
 
-    /**
-     * Send an image via WhatsApp.
-     *
-     * @param string $phone
-     * @param string $imageUrl
-     * @param string $caption
-     * @return array|null
-     */
     public function sendImage(string $phone, string $imageUrl, string $caption = ''): ?array
     {
         try {
-            $response = Http::withHeaders($this->getMultipartHeaders())
+            $this->getDeviceId($phone);
+            $response = Http::withHeaders($this->getMultipartHeaders($this->deviceId))
                 ->withBasicAuth($this->user, $this->pass)
                 ->asMultipart()
                 ->post("$this->url/send/image", [
@@ -233,28 +244,18 @@ class WhatsAppService
         }
     }
 
-    /**
-     * Send a document/file via WhatsApp.
-     *
-     * @param string $phone
-     * @param string $filePath
-     * @param string $caption
-     * @return array|null
-     */
     public function sendFile(string $phone, string $filePath, string $caption = ''): ?array
     {
         try {
-            $response = Http::withHeaders($this->getMultipartHeaders())
+            $this->getDeviceId($phone);
+            $response = Http::withHeaders($this->getMultipartHeaders($this->deviceId))
                 ->withBasicAuth($this->user, $this->pass)
-                ->attach(
-                    'file',
-                    file_get_contents($filePath),
-                    basename($filePath)
-                )
+                ->asMultipart()
+                ->attach('file', file_get_contents($filePath), basename($filePath))
                 ->post("$this->url/send/file", [
-                    'phone' => $this->formatPhone($phone),
-                    'caption' => $caption,
-                    'is_forwarded' => 'false',
+                    ['name' => 'phone',        'contents' => $this->formatPhone($phone)],
+                    ['name' => 'caption',      'contents' => $caption],
+                    ['name' => 'is_forwarded', 'contents' => 'false'],
                 ]);
 
             if ($response->successful()) {

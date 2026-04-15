@@ -25,7 +25,7 @@ class StoreWhatsappRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'institutionId' => ['required', 'integer', 'exists:institutions,id'],
+            'institutionId' => ['nullable'],
             'device' => ['required', 'string', 'unique:whatsapps,device'],
             'active' => ['required']
         ];

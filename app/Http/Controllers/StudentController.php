@@ -76,7 +76,10 @@ class StudentController extends Controller
     {
         try {
             $program = StudentProgram::with(['personal', 'parent', 'address', 'program', 'boarding', 'verification'])
-                ->whereYearid($request->yearId)->whereInstitutionid($request->institutionId)->get()->toArray();
+                ->whereYearid($request->yearId)->whereInstitutionid($request->institutionId)
+                ->orderBy('id', 'desc')
+                ->get()
+                ->toArray();
             $result = collect($program)->map(function ($item) {
                 return [
                     'id' => $item['id'],
@@ -86,7 +89,7 @@ class StudentController extends Controller
                     'birthDate' => $item['personal']['birthDate'],
                     'guardName' => $item['parent']['guardName'] ?? '-',
                     'address' => $item['address']['street'],
-                    'program' => $item['program']['name'],
+                    'program' => $item['program']['name'] ?? '-',
                     'boarding' => $item['boarding']['name'],
                     'verification' => $item['verification']['id'] ?? null
                 ];
@@ -151,8 +154,10 @@ class StudentController extends Controller
     public function invoice(Request $request)
     {
         try {
-            $program = StudentProgram::with(['personal', 'parent', 'address', 'verification', 'invoice', 'period'])
-                ->whereYearid($request->yearId)->whereInstitutionid($request->institutionId)->get()->toArray();
+            $program = StudentProgram::with(['personal', 'parent', 'address', 'verification', 'invoice', 'period', 'program'])
+                ->whereYearid($request->yearId)->whereInstitutionid($request->institutionId)
+                ->orderBy('id', 'desc')
+                ->get()->toArray();
 
             $result = collect($program)->map(function ($item) {
                 return [
@@ -166,6 +171,7 @@ class StudentController extends Controller
                     'verification' => $item['verification'],
                     'period' => $item['period']['description'],
                     'invoice' => $item['invoice'] ?? null,
+                    'program' => $item['program']['name'] ?? null,
                 ];
             });
 
@@ -228,7 +234,7 @@ class StudentController extends Controller
                     'statusMessage' => 'Pengguna tidak ditemukan.'
                 ], 404);
             }
-            
+
             $phoneNumber = $user->phone;
 
             if (!$phoneNumber) {
