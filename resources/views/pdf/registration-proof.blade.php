@@ -288,7 +288,12 @@
                     <td class="info-cell-data">Tempat, Tanggal Lahir</td>
                     <td class="info-cell-data">
                         {{ $student['birthPlace'] }},
-                        {{ \Carbon\Carbon::parse($student['birthDate'])->translatedFormat('d F Y') }}
+                        @php
+                            $bulanId = ['Januari'=>'January','Februari'=>'February','Maret'=>'March','April'=>'April','Mei'=>'May','Juni'=>'June','Juli'=>'July','Agustus'=>'August','September'=>'September','Oktober'=>'October','November'=>'November','Desember'=>'December'];
+                            $rawDate = $student['birthDate'];
+                            $parsedDate = str_replace(array_keys($bulanId), array_values($bulanId), $rawDate);
+                        @endphp
+                        {{ \Carbon\Carbon::parse($parsedDate)->translatedFormat('d F Y') }}
                     </td>
                 </tr>
                 <tr>

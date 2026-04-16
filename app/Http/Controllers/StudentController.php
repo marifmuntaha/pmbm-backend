@@ -171,7 +171,7 @@ class StudentController extends Controller
                     'verification' => $item['verification'],
                     'period' => $item['period']['description'],
                     'invoice' => $item['invoice'] ?? null,
-                    'program' => $item['program']['name'] ?? null,
+                    'program' => $item['program']['alias'] ?? null,
                 ];
             });
 
