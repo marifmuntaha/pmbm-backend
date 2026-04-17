@@ -17,6 +17,7 @@ use App\Services\TcpdfService;
 use Exception;
 use App\Jobs\SendWhatsAppMessage;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
@@ -91,7 +92,8 @@ class StudentController extends Controller
                     'address' => $item['address']['street'],
                     'program' => $item['program']['name'] ?? '-',
                     'boarding' => $item['boarding']['name'],
-                    'verification' => $item['verification']['id'] ?? null
+                    'verification' => $item['verification']['id'] ?? null,
+                    'status' => $item['status'] ?? 1,
                 ];
             });
             return response([
@@ -155,6 +157,10 @@ class StudentController extends Controller
     {
         try {
             $program = StudentProgram::with(['personal', 'parent', 'address', 'verification', 'invoice', 'period', 'program'])
+                ->where(function (Builder $query) {
+                    $query->where('status', "!=", 2)
+                        ->orWhereNull('status');
+                })
                 ->whereYearid($request->yearId)->whereInstitutionid($request->institutionId)
                 ->orderBy('id', 'desc')
                 ->get()->toArray();

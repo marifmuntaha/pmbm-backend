@@ -32,6 +32,7 @@ class UpdateProgramRequest extends FormRequest
             'programId' => ['sometimes', 'required', 'integer', 'exists:institution_programs,id'],
             'boardingId' => ['sometimes', 'required', 'integer', 'exists:master_boardings,id'],
             'roomId' => ['sometimes', 'nullable', 'integer', 'exists:master_rooms,id'],
+            'status' => ['sometimes', 'required', 'string'],
         ];
     }
 
@@ -44,6 +45,7 @@ class UpdateProgramRequest extends FormRequest
             'periodId' => 'ID Gelombang',
             'programId' => 'Program Lembaga',
             'boardingId' => 'Program Pondok',
+            'status' => 'Status',
         ];
     }
 

@@ -25,8 +25,13 @@ class StudentProgram extends Model
         'registration_number',
         'registration_token',
         'registration_generated_at',
+        'status',
         'createdBy',
         'updatedBy',
+    ];
+
+    protected $casts = [
+        'status' => 'integer',
     ];
 
     public function institution(): hasOne

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Resources\InvoiceResource;
 use App\Http\Resources\PaymentResource;
 use App\Models\Institution;
+use App\Models\Institution\Program;
 use App\Models\Invoice;
 use App\Models\Master\Boarding;
 use App\Models\Payment;
@@ -105,7 +106,7 @@ class ReportController extends Controller
                 $payments->whereInstitutionid($institutionId);
             }
 
-            $totalStudents = (int) (clone $invoices)->distinct('userId')->count('userId');
+            $totalStudents = (int) (clone $invoices)->distinct('userId')->whereNot('status', 2)->count('userId');
             $totalInvoicedRemaining = (int) (clone $invoices)->sum('amount');
             $totalPaid = (int) (clone $payments)->sum('amount');
 
@@ -153,15 +154,19 @@ class ReportController extends Controller
             $studentsQuery = StudentProgram::query()
                 ->where('institutionId', $institutionId)
                 ->when($yearId, fn($q) => $q->where('yearId', $yearId));
+            $studentQueryOut = StudentProgram::query()
+                ->where('institutionId', $institutionId)
+                ->where('status', 2)
+                ->when($yearId, fn($q) => $q->where('yearId', $yearId));
 
-
+            $studentsOut = $studentQueryOut->count();
             $totalStudents = $studentsQuery->count();
             $verifiedStudents = (clone $studentsQuery)->has('verification')->has('parent')->count();
             $unverifiedStudents = $totalStudents - $verifiedStudents;
             $totalBoarding = (clone $studentsQuery)->whereNot('boardingId', 1)->count();
             $totalNonBoarding = (clone $studentsQuery)->whereBoardingid(1)->count();
 
-            $programs = \App\Models\Institution\Program::where('institutionId', $institutionId)
+            $programs = Program::where('institutionId', $institutionId)
                 ->when($yearId, fn($q) => $q->where('yearId', $yearId))
                 ->get();
 
@@ -193,7 +198,8 @@ class ReportController extends Controller
                         'unverified' => $unverifiedStudents,
                         'boarding' => $totalBoarding,
                         'nonBoarding' => $totalNonBoarding,
-                        'programs' => $programBreakdown
+                        'programs' => $programBreakdown,
+                        'out' => $studentsOut
                     ],
                     'recentStudents' => $recentStudents->map(fn($item) => [
                         'name' => $item->personal->name,

@@ -31,6 +31,7 @@ class StoreProgramRequest extends FormRequest
             'periodId' => ['required', 'integer', 'exists:institution_periods,id'],
             'programId' => ['required', 'integer', 'exists:institution_programs,id'],
             'boardingId' => ['required', 'integer', 'exists:master_boardings,id'],
+            'status' => ['required', 'string']
         ];
     }
 
@@ -43,6 +44,7 @@ class StoreProgramRequest extends FormRequest
             'periodId' => 'ID Gelombang',
             'programId' => 'Program Lembaga',
             'boardingId' => 'Program Pondok',
+            'status' => 'Status Pendaftar',
         ];
     }
 
