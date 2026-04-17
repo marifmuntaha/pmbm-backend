@@ -229,6 +229,7 @@ class ReportController extends Controller
             $totalStudents = $studentsQuery->count();
             $verifiedStudents = (clone $studentsQuery)->has('verification')->has('parent')->count();
             $unverifiedStudents = $totalStudents - $verifiedStudents;
+            $totalStudentsOut = (clone $studentsQuery)->where('status', 2)->count();
 
             $totalBoarding = (clone $studentsQuery)->whereNotNull('boardingId')->count();
             $totalNonBoarding = (clone $studentsQuery)->whereNull('boardingId')->count();
@@ -247,6 +248,7 @@ class ReportController extends Controller
                     ->when($yearId, fn($q) => $q->where('yearId', $yearId));
 
                 $total = $query->count();
+                $out = (clone $query)->where('status', 2)->count();
                 $verified = (clone $query)->has('verification')->has('parent')->count();
 
                 $totalPaid = Payment::where('institutionId', $institution->id)
@@ -263,6 +265,7 @@ class ReportController extends Controller
                     'totalStudents' => $total,
                     'verified' => $verified,
                     'unverified' => $total - $verified,
+                    'out' => $out,
                     'totalPaid' => $totalPaid,
                     'totalUnpaid' => $remainingBalance,
                     'totalInvoiced' => $totalPaid + $remainingBalance,
@@ -305,6 +308,7 @@ class ReportController extends Controller
                 'result' => [
                     'totalInstitutions' => $totalInstitutions,
                     'totalStudents' => $totalStudents,
+                    'totalStudentsOut' => $totalStudentsOut,
                     'totalVerified' => $verifiedStudents,
                     'totalUnverified' => $unverifiedStudents,
                     'totalBoarding' => $totalBoarding,
