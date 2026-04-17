@@ -224,9 +224,6 @@ class StudentController extends Controller
             $data = $registrationService->getRegistrationProofData($studentProgram, $request->query('frontend_url'));
             $signedPath = $registrationService->generateSignedPdfFile($data, $studentProgram->institution);
 
-            $filename = 'bukti-pembayaran-' . ($studentProgram->registration_number ?? $userId) . '.pdf';
-
-            // Get user's phone number
             $user = User::find($userId);
             if (!$user) {
                 return response()->json([
@@ -244,8 +241,13 @@ class StudentController extends Controller
                 ], 400);
             }
 
-            // Dispatch job to send WhatsApp message with the PDF
-            SendWhatsAppMessage::dispatch($phoneNumber, 'Bukti pendaftaran Anda', null, 'Bukti pendaftaran Anda', $signedPath);
+            $caption = '*PMBM YAYASAN DARUL HIKMAH*'. PHP_EOL . PHP_EOL;
+            $caption .= "ini adalah pesan otomatis dari sistem." . PHP_EOL . PHP_EOL;
+            $caption .= 'Selamat, berkas pendaftaran Anda telah lengkap.'. PHP_EOL;
+            $caption .= 'admin akan memverifikasi pendaftaran anda, setelah itu kami akan mengirimkan pemberitahuan & tagihan untuk pembayaran.'. PHP_EOL . PHP_EOL;
+            $caption .= 'Terlampir adalah bukti pendaftaran Anda.'. PHP_EOL . PHP_EOL;
+            $caption .= 'Terima kasih.'. PHP_EOL;
+            SendWhatsAppMessage::dispatch($phoneNumber, $caption, null, 'Bukti pendaftaran Anda', $signedPath);
 
             return response()->json([
                 'status' => 'success',

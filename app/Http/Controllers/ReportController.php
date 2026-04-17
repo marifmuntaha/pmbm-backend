@@ -6,6 +6,7 @@ use App\Http\Resources\InvoiceResource;
 use App\Http\Resources\PaymentResource;
 use App\Models\Institution;
 use App\Models\Invoice;
+use App\Models\Master\Boarding;
 use App\Models\Payment;
 use App\Models\Student\StudentProgram;
 use Exception;
@@ -155,7 +156,7 @@ class ReportController extends Controller
 
 
             $totalStudents = $studentsQuery->count();
-            $verifiedStudents = (clone $studentsQuery)->has('verification')->count();
+            $verifiedStudents = (clone $studentsQuery)->has('verification')->has('parent')->count();
             $unverifiedStudents = $totalStudents - $verifiedStudents;
             $totalBoarding = (clone $studentsQuery)->whereNot('boardingId', 1)->count();
             $totalNonBoarding = (clone $studentsQuery)->whereBoardingid(1)->count();
@@ -220,13 +221,13 @@ class ReportController extends Controller
                 ->when($yearId, fn($q) => $q->where('yearId', $yearId));
 
             $totalStudents = $studentsQuery->count();
-            $verifiedStudents = (clone $studentsQuery)->has('verification')->count();
+            $verifiedStudents = (clone $studentsQuery)->has('verification')->has('parent')->count();
             $unverifiedStudents = $totalStudents - $verifiedStudents;
 
             $totalBoarding = (clone $studentsQuery)->whereNotNull('boardingId')->count();
             $totalNonBoarding = (clone $studentsQuery)->whereNull('boardingId')->count();
 
-            $boardingBreakdown = \App\Models\Master\Boarding::get()->map(function ($boarding) use ($yearId) {
+            $boardingBreakdown = Boarding::get()->map(function ($boarding) use ($yearId) {
                 return [
                     'name' => $boarding->name,
                     'count' => StudentProgram::where('boardingId', $boarding->id)
@@ -240,13 +241,13 @@ class ReportController extends Controller
                     ->when($yearId, fn($q) => $q->where('yearId', $yearId));
 
                 $total = $query->count();
-                $verified = (clone $query)->has('verification')->count();
+                $verified = (clone $query)->has('verification')->has('parent')->count();
 
-                $totalPaid = \App\Models\Payment::where('institutionId', $institution->id)
+                $totalPaid = Payment::where('institutionId', $institution->id)
                     ->when($yearId, fn($q) => $q->where('yearId', $yearId))
                     ->sum('amount');
 
-                $remainingBalance = \App\Models\Invoice::where('institutionId', $institution->id)
+                $remainingBalance = Invoice::where('institutionId', $institution->id)
                     ->when($yearId, fn($q) => $q->where('yearId', $yearId))
                     ->sum('amount');
 

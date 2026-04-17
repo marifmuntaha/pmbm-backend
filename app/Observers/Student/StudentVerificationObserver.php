@@ -24,7 +24,7 @@ class StudentVerificationObserver
             $caption = '*PMBM YAYASAN DARUL HIKMAH*'. PHP_EOL . PHP_EOL;
             $caption .= "ini adalah pesan otomatis dari sistem." . PHP_EOL . PHP_EOL;
             $caption .= 'Selamat, berkas pendaftaran Anda telah lengkap.'. PHP_EOL;
-            $caption .= 'admin akan memferifikasi pendaftaran anda, setelah itu kami akan mengirimkan pemberitahuan & tagihan untuk pembayaran.'. PHP_EOL . PHP_EOL;
+            $caption .= 'admin akan memverifikasi pendaftaran anda, setelah itu kami akan mengirimkan pemberitahuan & tagihan untuk pembayaran.'. PHP_EOL . PHP_EOL;
             $caption .= 'Terlampir adalah bukti pendaftaran Anda.'. PHP_EOL . PHP_EOL;
             $caption .= 'Terima kasih.'. PHP_EOL;
 
@@ -53,10 +53,10 @@ class StudentVerificationObserver
             if ($user->phone) {
                 // Send via Job (File + Caption, or just Caption if PDF failed)
                 SendWhatsAppMessage::dispatch(
-                    $user->phone, 
-                    $caption, 
-                    null, 
-                    $caption, 
+                    $user->phone,
+                    $caption,
+                    null,
+                    $caption,
                     $registrationProofPath
                 );
             }
