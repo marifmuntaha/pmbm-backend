@@ -64,7 +64,7 @@ class DetailController extends Controller
     public function update(UpdateDetailRequest $request, Detail $detail)
     {
         try {
-            return $detail->update(array_filter($request->all()))
+            return $detail->update($request->all())
                 ? response([
                     'status' => 'success',
                     'statusMessage' => 'Detail has been updated.',

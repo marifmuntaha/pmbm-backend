@@ -91,9 +91,11 @@ class StudentController extends Controller
                     'guardName' => $item['parent']['guardName'] ?? '-',
                     'address' => $item['address']['street'],
                     'program' => $item['program']['name'] ?? '-',
+                    'gender' => $item['personal']['gender'] ?? '0',
                     'boarding' => $item['boarding']['name'],
                     'verification' => $item['verification']['id'] ?? null,
                     'status' => $item['status'] ?? 1,
+                    'number_register' => $item['registration_number'] ?? '',
                 ];
             });
             return response([
@@ -309,7 +311,7 @@ class StudentController extends Controller
             $data = $registrationService->getRegistrationProofData($studentProgram, $request->query('frontend_url'));
             $signedPath = $registrationService->generateSignedPdfFile($data, $studentProgram->institution);
 
-            $filename = 'bukti-pembayaran-' . ($studentProgram->registration_number ?? $userId) . '.pdf';
+            $filename = 'bukti-pendaftaran-' . ($studentProgram->registration_number ?? $userId) . '.pdf';
 
             return response()->download($signedPath, $filename)->deleteFileAfterSend(true);
 
