@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Invoice\Detail;
 use App\Models\Student\StudentAddress;
 use App\Models\Student\StudentPersonal;
+use App\Models\Student\StudentProgram;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -45,6 +46,11 @@ class Invoice extends Model
     public function address(): HasOne
     {
         return $this->hasOne(StudentAddress::class, 'userId', 'userId' );
+    }
+
+    public function program(): HasOne
+    {
+        return $this->hasOne(StudentProgram::class, 'userId', 'userId' );
     }
 
     public function institution(): HasOne

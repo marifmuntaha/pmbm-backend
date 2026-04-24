@@ -44,16 +44,34 @@ class InvoiceResource extends JsonResource
                     'invoicePayments' => $this->payments
                 ];
             }
+            if ($request->type == 'datatable') {
+                $resources = [
+                    'id' => $this->id,
+                    'reference' => $this->reference,
+                    'student_name' => $this->whenLoaded('personal', function () {
+                        return $this->personal->name ?? '-';
+                    }),
+                    'program_name' => $this->whenLoaded('program', function () {
+                        return $this->program->program->name ?? '-';
+                    }),
+                    'original_invoice' => $this->whenLoaded('details', function () {
+                        return $this->details->where('invoiceId', $this->id)->sum('price');
+                    }),
+                    'discount' => $this->whenLoaded('details', function () {
+                        return $this->details->where('invoiceId', $this->id)->sum('discount');
+                    }),
+                    'original_amount' => $this->whenLoaded('payments', function () {
+                        return $this->amount + $this->payments->sum('amount');
+                    }),
+                    'payment' => $this->whenLoaded('payments', function () {
+                        return  $this->payments->sum('amount');
+                    }),
+                    'unpaid' => $this->whenLoaded('payments', function () {
+                        return  $this->amount;}),
+                    'status' => $this->status,
+                ];
+            }
         }
-        
-        $resources['student_name'] = $this->whenLoaded('personal', function () {
-            return $this->personal->name ?? '-';
-        });
-
-        $resources['original_amount'] = $this->whenLoaded('payments', function () {
-            // Original amount is remaining balance + total paid
-            return $this->amount + $this->payments->sum('amount');
-        }, $this->amount); // Default to current amount if payments not loaded
 
         return $resources;
     }

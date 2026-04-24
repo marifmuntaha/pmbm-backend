@@ -20,6 +20,7 @@ class Payment extends Model
         'receipt_token',
         'receipt_generated_at',
         'receipt_generated_by',
+        'deposited',
         'createdBy',
         'updatedBy',
     ];

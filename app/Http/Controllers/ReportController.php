@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Http\Resources\InvoiceResource;
+use App\Http\Resources\Master\ItemResource;
 use App\Http\Resources\PaymentResource;
 use App\Models\Institution;
 use App\Models\Institution\Program;
 use App\Models\Invoice;
 use App\Models\Master\Boarding;
+use App\Models\Master\Product;
 use App\Models\Payment;
 use App\Models\Student\StudentProgram;
 use Exception;
@@ -18,28 +20,65 @@ class ReportController extends Controller
     public function invoice(Request $request)
     {
         try {
-            $query = Invoice::with(['personal', 'payments'])->orderBy('created_at', 'desc');
-
-            if ($request->filled('yearId')) {
-                $query->where('yearId', $request->yearId);
-            }
-
-            if ($request->filled('institutionId')) {
-                $query->where('institutionId', $request->institutionId);
-            }
-
-            if ($request->user()->institutionId) {
-                $query->where('institutionId', $request->user()->institutionId);
-            }
-
-            if ($request->filled('status')) {
-                $query->where('status', $request->status);
-            }
+            $query = Invoice::with(['personal', 'program', 'payments', 'details'])
+                ->when($request->yearId, function ($query) use ($request) {
+                    $query->where('yearId', $request->yearId);
+                })
+                ->when($request->institutionId, function ($query) use ($request) {
+                    $query->where('institutionId', $request->institutionId);
+                })
+                ->when($request->user()->institutionId, function ($query) use ($request) {
+                    $query->where('institutionId', $request->user()->institutionId);
+                })
+                ->when($request->gender, function ($query) use ($request) {
+                    $query->whereHas('personal', function ($q) use ($request) {
+                        $q->where('gender', $request->gender);
+                    });
+                })
+                ->when($request->programId, function ($query) use ($request) {
+                    $query->whereHas('program', function ($q) use ($request) {
+                        $q->where('programId', $request->programId);
+                    });
+                })
+                ->when($request->boardingId, function ($query) use ($request) {
+                    $query->whereHas('program', function ($q) use ($request) {
+                        $q->where('boardingId', $request->boardingId);
+                    });
+                })->when($request->status, function ($query) use ($request) {
+                    $query->where('status', $request->status);
+                })
+                ->orderBy('created_at', 'desc');
 
             return response([
                 'status' => 'success',
                 'statusMessage' => '',
                 'result' => InvoiceResource::collection($query->get())
+            ]);
+        } catch (Exception $e) {
+            return response([
+                'status' => 'error',
+                'statusMessage' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function item(Request $request)
+    {
+        try {
+            $query = Product::with(['invoice'])
+                ->when($request->yearId, function ($query) use ($request) {
+                    $query->where('yearId', $request->yearId);
+                })
+                ->when($request->institutionId, function ($query) use ($request) {
+                    $query->where('institutionId', $request->institutionId);
+                })
+                ->when($request->user()->institutionId, function ($query) use ($request) {
+                    $query->where('institutionId', $request->user()->institutionId);
+                });
+            return response([
+                'status' => 'success',
+                'statusMessage' => '',
+                'result' => ItemResource::collection($query->get())
             ]);
         } catch (Exception $e) {
             return response([
@@ -421,6 +460,20 @@ class ReportController extends Controller
         return \Maatwebsite\Excel\Facades\Excel::download(
             new \App\Exports\ApplicantReportExport($yearId, $institutionId, $programId, $status, $boardingId),
             'laporan-pendaftar-' . date('Y-m-d-His') . '.xlsx'
+        );
+    }
+
+    public function exportItemReport(Request $request)
+    {
+        $yearId = $request->input('yearId');
+        $institutionId = $request->input('institutionId');
+        if ($request->user()->institutionId) {
+            $institutionId = $request->user()->institutionId;
+        }
+
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\ItemReportExport($yearId, $institutionId),
+            'laporan-tagihan-item-' . date('Y-m-d-His') . '.xlsx'
         );
     }
 

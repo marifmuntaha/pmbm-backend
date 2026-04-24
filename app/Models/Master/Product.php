@@ -3,7 +3,10 @@
 namespace App\Models\Master;
 
 use App\Models\Institution\Program;
+use App\Models\Invoice;
+use App\Models\Invoice\Detail;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Product extends Model
@@ -32,6 +35,16 @@ class Product extends Model
             'boardingId' => 'int',
             'price' => 'int',
         ];
+    }
+
+    public function invoice(): HasMany
+    {
+        return $this->hasMany(Invoice::class, 'institutionId', 'institutionId');
+    }
+
+    public function details(): HasMany
+    {
+        return $this->hasMany(Detail::class, 'productId', 'id');
     }
 
     public function program(): HasOne

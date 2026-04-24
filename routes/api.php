@@ -106,6 +106,8 @@ Route::prefix('v1')->group(callback: function () {
         Route::get('schedule', [PublicController::class, 'schedule'] );
     });
     Route::prefix('report')->group(function () {
+        Route::get('/item', [ReportController::class, 'item'])->middleware('auth:sanctum');
+        Route::get('/item/export', [ReportController::class, 'exportItemReport'])->middleware('auth:sanctum');
         Route::get('/invoice', [ReportController::class, 'invoice'])->middleware('auth:sanctum');
         Route::get('/invoice/export', [ReportController::class, 'exportInvoiceReport'])->middleware('auth:sanctum');
         Route::get('/payment', [ReportController::class, 'payment'])->middleware('auth:sanctum');
