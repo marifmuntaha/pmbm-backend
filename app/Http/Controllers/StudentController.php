@@ -78,6 +78,20 @@ class StudentController extends Controller
         try {
             $program = StudentProgram::with(['personal', 'parent', 'address', 'program', 'boarding', 'verification'])
                 ->whereYearid($request->yearId)->whereInstitutionid($request->institutionId)
+                ->when($request->gender, function ($query) use ($request) {
+                    $query->whereHas('personal', function ($q) use ($request) {
+                        $q->where('gender', $request->gender);
+                    });
+                })
+                ->when($request->programId, function ($query) use ($request) {
+                    $query->whereProgramid($request->programId);
+                })
+                ->when($request->boardingId, function ($query) use ($request) {
+                    $query->whereBoardingid($request->boardingId);
+                })
+                ->when($request->status, function ($query) use ($request) {
+                    $query->whereStatus($request->status);
+                })
                 ->orderBy('id', 'desc')
                 ->get()
                 ->toArray();

@@ -282,7 +282,7 @@ class PaymentController extends Controller
             }
 
             $user = auth()->user();
-            $isTreasurer = $user && $user->role == 4;
+            $isTreasurer = $user && $user->role == 3;
 
             if (!$isTreasurer && $payment->invoice->status !== 'PAID') {
                 return response()->json([
@@ -366,7 +366,7 @@ class PaymentController extends Controller
             }
 
             $user = auth()->user();
-            $isTreasurer = $user && $user->role == 4;
+            $isTreasurer = $user && $user->role == 3;
 
             if (!$isTreasurer && $payment->invoice->status !== 'PAID') {
                 return response()->json([
