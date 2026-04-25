@@ -113,6 +113,24 @@ class PaymentController extends Controller
         }
     }
 
+    public function update(Request $request, Payment $payment)
+    {
+        try {
+            return $payment->update(array_filter($request->all()))
+            ? response([
+                'status' => 'success',
+                'statusMessage' => 'Data berhasil diubah.',
+                'result' => $payment
+            ])
+            : throw new Exception('Gagal mengubah data.');
+        } catch (Exception $e) {
+            return response([
+                'status' => 'error',
+                'statusMessage' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function callback(Request $request, $provider = 'midtrans')
     {
         try {

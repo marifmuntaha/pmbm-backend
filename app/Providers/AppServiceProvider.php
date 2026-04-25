@@ -2,11 +2,13 @@
 
 namespace App\Providers;
 
+use App\Models\Account\Transaction;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Master\Year;
 use App\Models\Student\StudentVerification;
 use App\Models\User;
+use App\Observers\Account\TransactionObserver;
 use App\Observers\InvoiceObserver;
 use App\Observers\PaymentObserver;
 use App\Observers\Master\YearObserver;
@@ -33,11 +35,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+
         Invoice::observe(InvoiceObserver::class);
-        User::observe(UserObserver::class);
-        Year::observe(YearObserver::class);
         Payment::observe(PaymentObserver::class);
         StudentVerification::observe(StudentVerificationObserver::class);
+        Transaction::observe(TransactionObserver::class);
+        User::observe(UserObserver::class);
+        Year::observe(YearObserver::class);
 
         Builder::macro('whereLike', function ($attribute, $searchTerm) {
             return $this->where($attribute, 'LIKE', "%$searchTerm%");

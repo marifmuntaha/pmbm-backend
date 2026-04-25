@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\Account\TransactionController;
 use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Institution\AccountController;
 use App\Http\Controllers\Institution\ActivityController;
 use App\Http\Controllers\Institution\PeriodController;
 use App\Http\Controllers\Institution\ProgramController as InstitutionProgramController;
@@ -59,6 +61,8 @@ Route::prefix('v1')->group(callback: function () {
             Route::apiResource('activity', ActivityController::class);
             Route::apiResource('program', InstitutionProgramController::class);
             Route::apiResource('period', PeriodController::class);
+            Route::apiResource('account', AccountController::class)->only(['index', 'store', 'show']);
+            Route::apiResource('transaction', TransactionController::class)->only(['index', 'store']);
         });
         Route::prefix('student')->group(function () {
             Route::get('registration-proof', [StudentController::class, 'generateRegistrationProof']);
@@ -90,7 +94,7 @@ Route::prefix('v1')->group(callback: function () {
             Route::apiResource('gateway', GatewayController::class)->only(['index', 'update']);
         });
         Route::apiResource('announcement', AnnouncementController::class);
-        Route::apiResource('payment', PaymentController::class);
+        Route::apiResource('payment', PaymentController::class)->only(['index', 'store', 'update']);
         Route::apiResource('user', UserController::class);
         Route::post('whatsapp/login', [WhatsappController::class, 'login']);
         Route::apiResource('whatsapp', WhatsAppController::class);

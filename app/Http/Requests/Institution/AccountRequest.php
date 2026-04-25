@@ -1,11 +1,13 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Institution;
 
 use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
 
-class StorePaymentRequest extends FormRequest
+class AccountRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -23,17 +25,15 @@ class StorePaymentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'reference' => 'required|string',
-            'amount' => 'required|int',
-            'userId' => 'required|int',
+            //
         ];
     }
 
-    public function prepareForValidation(): void
+    protected function failedValidation(Validator $validator)
     {
-        $this->merge([
-            'createdBy' => $this->user('sanctum')->id,
-            'updatedBy' => $this->user('sanctum')->id,
-        ]);
+        throw new HttpResponseException(response()->json([
+            'status' => 'error',
+            'statusMessage' => $validator->errors()->first(),
+        ], 422));
     }
 }
