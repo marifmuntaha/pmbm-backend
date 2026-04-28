@@ -13,7 +13,7 @@ class TransactionObserver
 
     public function creating(Transaction $transaction): void
     {
-        $lastTransaction = Transaction::latest('created_at')->first();
+        $lastTransaction = Transaction::latest('id')->first();
         if ($lastTransaction) {
             $transaction->balance = ($lastTransaction?->balance ?? 0) + ($transaction->debit ?? 0) - ($transaction->credit ?? 0);
         } else {

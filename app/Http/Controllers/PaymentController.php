@@ -36,6 +36,9 @@ class PaymentController extends Controller
             if ($request->has('userId')) {
                 $payments->whereUserid($request->userId);
             }
+            if ($request->has('sort')) {
+                $payments->orderBy('id', $request->sort);
+            }
             return response([
                 'status' => 'success',
                 'statusMessage' => '',
@@ -245,13 +248,13 @@ class PaymentController extends Controller
                 ], 422);
             }
 
-            Payment::create([
+            $payment = Payment::create([
                 'yearId' => $invoice->yearId,
                 'institutionId' => $invoice->institutionId,
                 'userId' => $request->userId,
                 'invoiceId' => $request->invoiceId,
-                'method' => 1, // Cash
-                'status' => 2, // Success
+                'method' => 1,
+                'status' => 2,
                 'transaction_id' => 'CASH-' . time(),
                 'transaction_time' => Carbon::now()->toDateTimeString(),
                 'amount' => $request->amount,
@@ -268,6 +271,7 @@ class PaymentController extends Controller
             return response([
                 'status' => 'success',
                 'statusMessage' => 'Pembayaran cash berhasil dicatat.',
+                'result' => $payment
             ]);
 
         } catch (Exception $e) {

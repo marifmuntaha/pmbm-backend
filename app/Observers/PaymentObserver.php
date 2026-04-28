@@ -3,7 +3,9 @@
 namespace App\Observers;
 
 use App\Jobs\SendWhatsAppMessage;
+use App\Models\Account\Transaction;
 use App\Models\Institution;
+use App\Models\Institution\Account;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\User;
@@ -11,7 +13,6 @@ use App\Services\LogService;
 use App\Services\Payment\PaymentFactory;
 use App\Services\PaymentReceiptService;
 use Exception;
-use Illuminate\Support\Facades\Log;
 
 class PaymentObserver
 {
@@ -118,6 +119,31 @@ class PaymentObserver
                     SendWhatsAppMessage::dispatch($user->phone, $reminder);
                 }
             }
+
+            $account = Account::whereInstitutionid($payment->institutionId)
+                ->whereMethod($payment->method)->first();
+            $methodLabel = $payment->method === 1 ? 'Tunai' : 'Online';
+            Transaction::create([
+                'yearId' => $payment->yearId,
+                'institutionId' => $payment->institutionId,
+                'accountId' => $account->id,
+                'paymentId' => $payment->id,
+                'name' => "Pembayaran {$methodLabel} a.n {$payment->personal->name} ({$payment->transaction_id})",
+                'credit' => 0,
+                'debit' => $payment->amount,
+            ]);
+            if ($payment->method === 2) {
+                Transaction::create([
+                    'yearId' => $payment->yearId,
+                    'institutionId' => $payment->institutionId,
+                    'accountId' => $account->id,
+                    'paymentId' => $payment->id,
+                    'name' => "Biaya Transaksi via Midtrans ({$payment->transaction_id})",
+                    'credit' => 4500,
+                    'debit' => 0,
+                ]);
+            }
+
         } catch (Exception $e) {
             LogService::error('PaymentObserver Error: ' . $e->getMessage(), [
                 'paymentId' => $payment->id,

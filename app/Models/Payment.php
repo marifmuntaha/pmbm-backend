@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Models\Student\StudentPersonal;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Payment extends Model
 {
@@ -29,22 +31,22 @@ class Payment extends Model
         'receipt_generated_at' => 'datetime',
     ];
 
-    public function user(): \Illuminate\Database\Eloquent\Relations\HasOne
+    public function user(): HasOne
     {
         return $this->hasOne(User::class, 'id', 'userId');
     }
 
-    public function personal(): \Illuminate\Database\Eloquent\Relations\HasOne
+    public function personal(): HasOne
     {
-        return $this->hasOne(\App\Models\Student\StudentPersonal::class, 'userId', 'userId');
+        return $this->hasOne(StudentPersonal::class, 'userId', 'userId');
     }
 
-    public function invoice(): \Illuminate\Database\Eloquent\Relations\HasOne
+    public function invoice(): HasOne
     {
         return $this->hasOne(Invoice::class, 'id', 'invoiceId');
     }
 
-    public function institution(): \Illuminate\Database\Eloquent\Relations\HasOne
+    public function institution(): HasOne
     {
         return $this->hasOne(Institution::class, 'id', 'institutionId');
     }
