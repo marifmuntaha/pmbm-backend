@@ -118,49 +118,51 @@ class InvoiceController extends Controller
                 ], 400);
             }
 
-            $token = $invoice->link;
             $service = PaymentFactory::create();
+            $token = '';
 
-            if (empty($token)) {
-                try {
-                    $adminFee = 3500;
-                    $totalAmount = (int)$invoice->amount + $adminFee;
+            // Selalu buat transaksi baru setiap resend agar token tidak expired.
+            // Token Midtrans hanya berlaku ~24 jam; token lama di DB bisa sudah kedaluwarsa.
+            try {
+                $adminFee = 3500;
+                $totalAmount = (int)$invoice->amount + $adminFee;
 
-                    $params = [
-                        'transaction_details' => [
-                            'order_id' => $invoice->reference . '-RESEND-' . time(),
-                            'gross_amount' => $totalAmount,
+                $params = [
+                    'transaction_details' => [
+                        // order_id unik setiap request agar tidak konflik dengan transaksi sebelumnya
+                        'order_id' => $invoice->reference . '-RESEND-' . time(),
+                        'gross_amount' => $totalAmount,
+                    ],
+                    'customer_details' => [
+                        'first_name' => $user->personal->name ?? '',
+                        'email' => $user->email,
+                        'phone' => $user->phone,
+                    ],
+                    'item_details' => [
+                        [
+                            'id' => 'PMBM-' . $invoice->yearId . '-' . $invoice->institutionId,
+                            'price' => (int)$invoice->amount,
+                            'quantity' => 1,
+                            'name' => 'Tagihan PMBM Yayasan Darul Hikmah',
                         ],
-                        'customer_details' => [
-                            'full_name' => $user->personal->name ?? '',
-                            'email' => $user->email,
-                            'phone' => $user->phone,
-                        ],
-                        'item_details' => [
-                            [
-                                'id' => 'PMBM-' . $invoice->yearId . '-' . $invoice->institutionId,
-                                'price' => (int)$invoice->amount,
-                                'quantity' => 1,
-                                'name' => 'Tagihan PMBM Yayasan Darul Hikmah',
-                            ],
-                            [
-                                'id' => 'ADMIN-FEE',
-                                'price' => $adminFee,
-                                'quantity' => 1,
-                                'name' => 'Biaya Admin',
-                            ]
-                        ],
-                    ];
+                        [
+                            'id' => 'ADMIN-FEE',
+                            'price' => $adminFee,
+                            'quantity' => 1,
+                            'name' => 'Biaya Admin',
+                        ]
+                    ],
+                ];
 
-                    $result = $service->createTransaction($params);
-                    $token = $result['token'] ?? '';
+                $result = $service->createTransaction($params);
+                $token = $result['token'] ?? '';
 
-                    if (!empty($token)) {
-                        $invoice->update(['link' => $token]);
-                    }
-                } catch (\Exception $e) {
-                     Log::error('Gagal generate Midtrans link saat resend invoice: ' . $e->getMessage());
+                if (!empty($token)) {
+                    // Simpan token baru, timpa token lama yang mungkin sudah expired
+                    $invoice->update(['link' => $token]);
                 }
+            } catch (\Exception $e) {
+                Log::error('Gagal generate Midtrans link saat resend invoice: ' . $e->getMessage());
             }
 
             $paymentLink = rtrim($token ? $service->getRedirectUrl($token) : '');

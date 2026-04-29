@@ -27,7 +27,7 @@ return new class extends Migration
             $table->unsignedBigInteger('yearId');
             $table->unsignedBigInteger('institutionId');
             $table->unsignedBigInteger('accountId');
-            $table->unsignedBigInteger('paymentId');
+            $table->unsignedBigInteger('paymentId')->nullable();
             $table->text('name');
             $table->integer('debit')->nullable();
             $table->integer('credit')->nullable();

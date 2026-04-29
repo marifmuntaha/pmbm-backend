@@ -145,9 +145,18 @@ class ReportController extends Controller
                 $payments->whereInstitutionid($institutionId);
             }
 
-            $totalStudents = (int) (clone $invoices)->distinct('userId')->whereNot('status', 2)->count('userId');
-            $totalInvoicedRemaining = (int) (clone $invoices)->sum('amount');
-            $totalPaid = (int) (clone $payments)->sum('amount');
+            // totalStudents: hanya siswa yang TERVERIFIKASI (has verification + has parent data)
+            // menggunakan StudentProgram agar konsisten dengan definisi "terverifikasi" di seluruh sistem
+            $totalStudents = (int) StudentProgram::query()
+                ->when($yearId, fn($q) => $q->where('yearId', $yearId))
+                ->when($institutionId, fn($q) => $q->where('institutionId', $institutionId))
+                ->has('verification')
+                ->has('parent')
+                ->count();
+
+            $totalInvoicedRemaining = (int)(clone $invoices)->sum('amount');
+            $totalPaid = (int)(clone $payments)->sum('amount');
+
 
             // In our system, invoice amounts decrease as payments are made.
             // totalInvoiced (Original) = totalPaid + totalInvoicedRemaining

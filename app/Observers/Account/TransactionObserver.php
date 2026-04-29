@@ -13,7 +13,9 @@ class TransactionObserver
 
     public function creating(Transaction $transaction): void
     {
-        $lastTransaction = Transaction::latest('id')->first();
+        $lastTransaction = Transaction::whereYearid($transaction->yearId)
+            ->whereInstitutionid($transaction->institutionId)
+            ->latest('id')->first();
         if ($lastTransaction) {
             $transaction->balance = ($lastTransaction?->balance ?? 0) + ($transaction->debit ?? 0) - ($transaction->credit ?? 0);
         } else {
@@ -23,12 +25,17 @@ class TransactionObserver
 
     public function created(Transaction $transaction): void
     {
-        $acc = Account::whereInstitutionid($transaction->institutionId)
-            ->whereMethod($transaction->payment->method);
+        if ($transaction->payment) {
+            $acc = Account::whereInstitutionid($transaction->institutionId)
+                ->whereMethod($transaction->payment->method);
+
+        } else {
+            $acc = Account::whereId($transaction->accountId);
+        }
         $account = $acc->first();
-        $credit = $account->credit + $transaction->credit;
-        $debit = $account->debit + $transaction->debit;
-        $balance = ($account->debit + $transaction->debit) - ($account->credit + $transaction->credit);
+        $credit = (int)  $account->credit + (int) $transaction->credit;
+        $debit = (int) $account->debit + (int) $transaction->debit;
+        $balance = ((int) $account->debit + (int) $transaction->debit) - ((int) $account->credit + (int)$transaction->credit);
         $acc->update([
             'credit' => $credit,
             'debit' => $debit,

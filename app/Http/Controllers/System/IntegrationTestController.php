@@ -177,11 +177,30 @@ class IntegrationTestController extends Controller
 
         try {
             $midtrans = new MidtransService($gateway);
-            $orderId = 'TEST-' . time();
+
+            // Jika invoice_reference diberikan, gunakan agar order_id bisa di-trace saat test callback.
+            // Format: {reference}-TEST-{timestamp} sehingga callback parser dapat memotong suffix dengan benar.
+            $invoiceReference = $request->input('invoice_reference');
+            if ($invoiceReference) {
+                $invoice = Invoice::whereReference($invoiceReference)->first();
+                if (!$invoice) {
+                    return response()->json([
+                        'status' => 'error',
+                        'statusMessage' => "Invoice dengan reference '{$invoiceReference}' tidak ditemukan."
+                    ], 404);
+                }
+                $grossAmount = (int)$invoice->amount + 3500;
+                $orderId = $invoiceReference . '-TEST-' . time();
+            } else {
+                // Fallback: order_id dummy, TIDAK bisa dipakai untuk test callback
+                $grossAmount = 10000;
+                $orderId = 'TEST-DUMMY-' . time();
+            }
+
             $params = [
                 'transaction_details' => [
                     'order_id' => $orderId,
-                    'gross_amount' => 10000,
+                    'gross_amount' => $grossAmount,
                 ],
                 'customer_details' => [
                     'first_name' => 'Testing',
@@ -199,7 +218,8 @@ class IntegrationTestController extends Controller
                 'result' => [
                     'order_id' => $orderId,
                     'snap_token' => $result['token'] ?? null,
-                    'redirect_url' => $result['redirect_url'] ?? null,
+                    'payment_url' => isset($result['token']) ? $midtrans->getRedirectUrl($result['token']) : null,
+                    'invoice_reference' => $invoiceReference,
                 ]
             ]);
         } catch (\Exception $e) {
@@ -223,16 +243,73 @@ class IntegrationTestController extends Controller
                 return response()->json(['status' => 'error', 'statusMessage' => 'Gateway Midtrans aktif tidak ditemukan.'], 404);
             }
 
-            $statusCode = '200'; // Default for testing
+            $statusCode = '200';
             if ($request->status === 'pending') $statusCode = '201';
             if ($request->status === 'expire' || $request->status === 'cancel') $statusCode = '407';
 
-            $grossAmount = '10000.00';
-            $signature = hash("sha512", $request->order_id . $statusCode . $grossAmount . $gateway->server_key);
+            // --- Cari invoice dari order_id ---
+            // Format order_id: {reference}-{SUFFIX}-{timestamp}
+            // Contoh: INV-PMB.40001-TEST-1714387654
+            //         INV-PMB.40001-RESEND-1714387654
+            //         INV-PMB.40001-SISA-1714387654
+            // Strategi: potong 2 bagian terakhir (suffix + timestamp) jika ada 3+ bagian,
+            //           atau potong 1 bagian terakhir jika hanya ada 2 bagian.
+            $orderId = $request->order_id;
+            $parts = explode('-', $orderId);
+            $partCount = count($parts);
 
-            // Simulate Midtrans notification payload
+            if ($partCount < 2) {
+                return response()->json([
+                    'status' => 'error',
+                    'statusMessage' => 'Format Order ID tidak valid. Gunakan format: {invoice_reference}-{SUFFIX}-{timestamp}'
+                ], 400);
+            }
+
+            // Potong suffix dan timestamp di akhir untuk mendapatkan invoice reference.
+            // Suffix standar: TEST, RESEND, SISA — selalu diikuti timestamp (numerik).
+            // Strategi aman: cek apakah part terakhir adalah numerik (timestamp),
+            // dan part kedua-dari-akhir adalah suffix teks → potong keduanya.
+            $lastPart = end($parts);
+            $secondLastPart = $parts[$partCount - 2] ?? '';
+            $knownSuffixes = ['TEST', 'RESEND', 'SISA'];
+
+            if (is_numeric($lastPart) && in_array(strtoupper($secondLastPart), $knownSuffixes)) {
+                // Format: {reference}-{SUFFIX}-{timestamp} → ambil semua kecuali 2 terakhir
+                $referenceParts = array_slice($parts, 0, $partCount - 2);
+            } elseif (is_numeric($lastPart)) {
+                // Format: {reference}-{timestamp} → ambil semua kecuali 1 terakhir
+                $referenceParts = array_slice($parts, 0, $partCount - 1);
+            } else {
+                // Tidak ada timestamp → pakai seluruh order_id sebagai reference
+                $referenceParts = $parts;
+            }
+
+            $invoiceReference = implode('-', $referenceParts);
+
+            if (empty($invoiceReference)) {
+                return response()->json([
+                    'status' => 'error',
+                    'statusMessage' => 'Gagal mengekstrak invoice reference dari Order ID: ' . $orderId
+                ], 400);
+            }
+
+            $invoice = Invoice::whereReference($invoiceReference)->first();
+
+            if (!$invoice) {
+                return response()->json([
+                    'status' => 'error',
+                    'statusMessage' => "Invoice tidak ditemukan dengan reference: {$invoiceReference} (diekstrak dari order_id: {$orderId})"
+                ], 404);
+            }
+
+            // Sesuaikan gross_amount dengan jumlah invoice aktual
+            $adminFee = 3500;
+            $grossAmount = number_format((int)$invoice->amount + $adminFee, 2, '.', '');
+            $signature = hash("sha512", $orderId . $statusCode . $grossAmount . $gateway->server_key);
+
+            // Simulasi payload Midtrans notification
             $payload = [
-                'order_id' => $request->order_id,
+                'order_id' => $orderId,
                 'status_code' => $statusCode,
                 'transaction_status' => $request->status,
                 'payment_type' => 'credit_card',
@@ -243,45 +320,29 @@ class IntegrationTestController extends Controller
                 'signature_key' => $signature,
             ];
 
-            // Use the same logic as PaymentController@callback
-            $provider = 'midtrans';
-            $service = PaymentFactory::createFromProvider($provider);
+            $service = PaymentFactory::createFromProvider('midtrans');
             $data = $service->handleCallback($payload);
 
-            $orderId = $data['order_id'] ?? '';
-            $orderIdParts = explode('-', $orderId);
-
-            if (count($orderIdParts) < 2) {
-                return response()->json(['status' => 'error', 'statusMessage' => 'Format Order ID tidak valid.'], 400);
-            }
-
-            $invoiceReference = $orderIdParts[0] . '-' . $orderIdParts[1];
-            $invoice = Invoice::whereReference($invoiceReference)->first();
-
-            if (!$invoice) {
-                return response()->json(['status' => 'error', 'statusMessage' => "Invoice tidak ditemukan: {$invoiceReference}"], 404);
-            }
-
-            // Internal call to emulate the processing
             $transactionStatus = $data['transaction_status'];
             $fraudStatus = $data['fraud_status'];
-
             $isSuccess = ($transactionStatus == 'settlement' || ($transactionStatus == 'capture' && $fraudStatus == 'accept'));
 
-            if ($isSuccess) {
-                LogService::transaction("Simulasi Callback Berhasil (Settlement): {$request->order_id}", ['order_id' => $request->order_id]);
-                return response()->json([
-                    'status' => 'success',
-                    'statusMessage' => 'Simulasi callback berhasil. Status: Terbayar.',
-                    'result' => $data
-                ]);
-            }
+            $statusLabel = $isSuccess ? 'Terbayar (Settlement)' : ucfirst($transactionStatus);
 
-            LogService::log("Simulasi Callback Dilakukan: {$request->order_id} dengan status {$transactionStatus}", 'info', ['order_id' => $request->order_id, 'status' => $transactionStatus]);
+            LogService::log("Simulasi Callback Midtrans: {$orderId} → {$transactionStatus}", 'info', [
+                'order_id' => $orderId,
+                'invoice_reference' => $invoiceReference,
+                'status' => $transactionStatus
+            ]);
+
             return response()->json([
                 'status' => 'success',
-                'statusMessage' => "Simulasi callback berhasil. Status: {$transactionStatus}.",
-                'result' => $data
+                'statusMessage' => "Simulasi callback berhasil. Invoice: {$invoiceReference}. Status: {$statusLabel}.",
+                'result' => array_merge($data, [
+                    'invoice_reference' => $invoiceReference,
+                    'invoice_amount' => $invoice->amount,
+                    'invoice_status' => $invoice->status,
+                ])
             ]);
 
         } catch (\Exception $e) {

@@ -179,14 +179,12 @@ class PaymentController extends Controller
             $transactionStatus = $data['transaction_status'];
             $fraudStatus = $data['fraud_status'];
 
-            // Check if payment is successful (Midtrans)
             $isSuccess = false;
             if ($transactionStatus == 'settlement' || ($transactionStatus == 'capture' && $fraudStatus == 'accept')) {
                 $isSuccess = true;
             }
 
             if ($isSuccess) {
-                 // Check for idempotency
                 $existingPayment = Payment::where('transaction_id', $data['transaction_id'] ?? $data['order_id'])->first();
                 if ($existingPayment) {
                     return response(['message' => 'Payment already recorded'], 200);
@@ -194,10 +192,9 @@ class PaymentController extends Controller
 
                 $adminFee = 3500;
                 $paidAmount = (int)$data['amount'] - $adminFee;
-                // Pastikan jika entah kenapa paidAmount minus karena promo Midtrans, maka diset jadi 0
                 if ($paidAmount < 0) $paidAmount = 0;
 
-                \App\Models\Payment::create([
+                Payment::create([
                     'yearId' => $invoice->yearId,
                     'institutionId' => $invoice->institutionId,
                     'userId' => $invoice->userId,
@@ -531,117 +528,118 @@ class PaymentController extends Controller
         try {
             $payment->load(['institution']);
             $user = User::with('personal')->find($payment->userId);
-            if ($user && $user->phone) {
-                $paymentReceiptService = new PaymentReceiptService();
-                $payment = $paymentReceiptService->generateReceipt($payment, $user);
-                $receiptData = $paymentReceiptService->getReceiptData($payment);
-                $receiptPath = $paymentReceiptService->generateSignedPdfFile($receiptData);
-                $institution = Institution::find($payment->institutionId);
-                $institutionName = $institution ? $institution->surname : 'Yayasan Darul Hikmah Menganti';
-                $message = "*PMBM YAYASAN DARUL HIKMAH*" . PHP_EOL . PHP_EOL;
-                $message .= "Assalamualaikum wr wb." . PHP_EOL;
-                $message .= "ini adalah pesan otomatis dari sistem" . PHP_EOL . PHP_EOL;
-                $message .= "Halo, {$user->personal->name}." . PHP_EOL;
-                $message .= "Pembayaran Anda sebesar *Rp. " . number_format($payment->amount) . "* telah kami terima." . PHP_EOL . PHP_EOL;
-                $message .= "Metode: " . ($payment->method == 1 ? 'Cash / Tunai' : 'Online Transfer') . PHP_EOL;
-                $message .= "ID Transaksi: {$payment->transaction_id}" . PHP_EOL;
-                $message .= "Waktu: {$payment->transaction_time}" . PHP_EOL . PHP_EOL;
-                $message .= "Terlampir adalah bukti pembayaran Anda." . PHP_EOL . PHP_EOL;
-                $message .= "Terima kasih telah melakukan pembayaran. Silakan cek status pendaftaran Anda di aplikasi." . PHP_EOL . PHP_EOL;
 
-                $message .= "Wassalamualaikum wr wb" . PHP_EOL . PHP_EOL;
-                $message .= "-Panitia PMBM {$institutionName}-" . PHP_EOL;
-
-                SendWhatsAppMessage::dispatch($user->phone, $message, null, $message, $receiptPath);
-                LogService::transaction("Pembayaran diterima: Rp. " . number_format($payment->amount) . " dari {$user->personal->name}", [
-                    'paymentId' => $payment->id,
-                    'transaction_id' => $payment->transaction_id,
-                ]);
+            if (!$user || !$user->phone) {
                 return response([
-                    'status' => 'success',
-                    'statusMessage' => 'Notifikasi telah dikirim',
-                ]);
+                    'status' => 'error',
+                    'statusMessage' => 'Pengguna tidak memiliki nomor telepon yang valid.',
+                ], 400);
             }
 
+            // --- Blok 1: Kirim bukti pembayaran ---
+            $paymentReceiptService = new PaymentReceiptService();
+            $payment = $paymentReceiptService->generateReceipt($payment, $user);
+            $receiptData = $paymentReceiptService->getReceiptData($payment);
+            $receiptPath = $paymentReceiptService->generateSignedPdfFile($receiptData);
+            $institution = Institution::find($payment->institutionId);
+            $institutionName = $institution ? $institution->surname : 'Yayasan Darul Hikmah Menganti';
+            $message = "*PMBM YAYASAN DARUL HIKMAH*" . PHP_EOL . PHP_EOL;
+            $message .= "Assalamualaikum wr wb." . PHP_EOL;
+            $message .= "ini adalah pesan otomatis dari sistem" . PHP_EOL . PHP_EOL;
+            $message .= "Halo, {$user->personal->name}." . PHP_EOL;
+            $message .= "Pembayaran Anda sebesar *Rp. " . number_format($payment->amount) . "* telah kami terima." . PHP_EOL . PHP_EOL;
+            $message .= "Metode: " . ($payment->method == 1 ? 'Cash / Tunai' : 'Online Transfer') . PHP_EOL;
+            $message .= "ID Transaksi: {$payment->transaction_id}" . PHP_EOL;
+            $message .= "Waktu: {$payment->transaction_time}" . PHP_EOL . PHP_EOL;
+            $message .= "Terlampir adalah bukti pembayaran Anda." . PHP_EOL . PHP_EOL;
+            $message .= "Terima kasih telah melakukan pembayaran. Silakan cek status pendaftaran Anda di aplikasi." . PHP_EOL . PHP_EOL;
+            $message .= "Wassalamualaikum wr wb" . PHP_EOL . PHP_EOL;
+            $message .= "-Panitia PMBM {$institutionName}-" . PHP_EOL;
+
+            SendWhatsAppMessage::dispatch($user->phone, $message, null, $message, $receiptPath);
+            LogService::transaction("Pembayaran diterima: Rp. " . number_format($payment->amount) . " dari {$user->personal->name}", [
+                'paymentId' => $payment->id,
+                'transaction_id' => $payment->transaction_id,
+            ]);
+
+            // --- Blok 2: Cek sisa tagihan & kirim reminder + link baru jika belum lunas ---
             $invoice = Invoice::find($payment->invoiceId);
-            if ($invoice && $user && $user->phone) {
-                $sisaTagihan = $invoice->amount - $payment->amount;
+            if ($invoice && $invoice->amount > 0 && $invoice->status !== 'PAID') {
+                $sisaTagihan = $invoice->amount;
+                $paymentLink = '';
 
-                if ($sisaTagihan > 0) {
-                    try {
-                        $service = PaymentFactory::create();
-                        $adminFee = 3500;
-                        $totalAmount = (int)$sisaTagihan + $adminFee;
+                try {
+                    $service = PaymentFactory::create();
+                    $adminFee = 3500;
+                    $totalAmount = (int)$sisaTagihan + $adminFee;
 
-                        $params = [
-                            'transaction_details' => [
-                                'order_id' => $invoice->reference . '-SISA-' . time(),
-                                'gross_amount' => $totalAmount,
+                    $params = [
+                        'transaction_details' => [
+                            'order_id' => $invoice->reference . '-SISA-' . time(),
+                            'gross_amount' => $totalAmount,
+                        ],
+                        'customer_details' => [
+                            'first_name' => $user->personal->name ?? '',
+                            'email' => $user->email,
+                            'phone' => $user->phone,
+                        ],
+                        'item_details' => [
+                            [
+                                'id' => 'PMBM-' . $invoice->yearId . '-' . $invoice->institutionId,
+                                'price' => (int)$sisaTagihan,
+                                'quantity' => 1,
+                                'name' => 'Sisa Tagihan PMBM Yayasan Darul Hikmah',
                             ],
-                            'customer_details' => [
-                                'first_name' => $user->personal->name ?? '',
-                                'email' => $user->email,
-                                'phone' => $user->phone,
-                            ],
-                            'item_details' => [
-                                [
-                                    'id' => 'PMBM-' . $invoice->yearId . '-' . $invoice->institutionId,
-                                    'price' => (int)$sisaTagihan,
-                                    'quantity' => 1,
-                                    'name' => 'Sisa Tagihan PMBM Yayasan Darul Hikmah',
-                                ],
-                                [
-                                    'id' => 'ADMIN-FEE',
-                                    'price' => $adminFee,
-                                    'quantity' => 1,
-                                    'name' => 'Biaya Admin',
-                                ]
-                            ],
-                        ];
+                            [
+                                'id' => 'ADMIN-FEE',
+                                'price' => $adminFee,
+                                'quantity' => 1,
+                                'name' => 'Biaya Admin',
+                            ]
+                        ],
+                    ];
 
-                        $result = $service->createTransaction($params);
+                    $result = $service->createTransaction($params);
+                    $token = $result['token'] ?? '';
 
-                        if (!empty($result['token'])) {
-                            Invoice::where('id', $invoice->id)->update(['link' => $result['token']]);
-                        }
-                        return response([
-                            'status' => 'success',
-                            'statusMessage' => 'Notifikasi telah dikirim',
-                        ]);
-                    } catch (Exception $e) {
-                        LogService::error('Gagal generate Midtrans link untuk sisa tagihan: ' . $e->getMessage(), [
-                            'invoiceId' => $invoice->id,
-                            'error' => $e->getMessage()
-                        ]);
-                        return response([
-                            'status' => 'error',
-                            'statusMessage' => $e->getMessage()
-                        ], 500);
+                    if (!empty($token)) {
+                        Invoice::where('id', $invoice->id)->update(['link' => $token]);
+                        // Bangun URL redirect dari token (bukan redirect_url yang tidak ada di Snap API)
+                        $paymentLink = $service->getRedirectUrl($token);
                     }
-
-                    $institution = Institution::find($payment->institutionId);
-                    $institutionName = $institution ? $institution->surname : 'Yayasan Darul Hikmah Menganti';
-                    $reminder = "*PMBM YAYASAN DARUL HIKMAH*" . PHP_EOL . PHP_EOL;
-                    $reminder .= "Assalamualaikum wr wb." . PHP_EOL;
-                    $reminder .= "ini adalah pesan otomatis dari sistem" . PHP_EOL . PHP_EOL;
-                    $reminder .= "Pembayaran Anda telah kami catat, namun tagihan Anda belum lunas." . PHP_EOL;
-                    $reminder .= "Sisa tagihan yang harus dibayarkan adalah sebesar *Rp. " . number_format($sisaTagihan, 0, ',', '.') . "*." . PHP_EOL . PHP_EOL;
-
-                    if ($paymentLink) {
-                        $reminder .= "Silakan kunjungi tautan berikut untuk melakukan pembayaran sisa tagihan:" . PHP_EOL;
-                        $reminder .= $paymentLink . PHP_EOL . PHP_EOL;
-                    } else {
-                        $reminder .= "Silakan masuk ke aplikasi untuk melanjutkan pembayaran sisa tagihan." . PHP_EOL . PHP_EOL;
-                    }
-                    $reminder .= "Terima kasih." . PHP_EOL . PHP_EOL;
-                    $reminder .= "Wassalamualaikum wr wb" . PHP_EOL . PHP_EOL;
-                    $reminder .= "-Panitia PMBM {$institutionName}-" . PHP_EOL;
-
-                    SendWhatsAppMessage::dispatch($user->phone, $reminder);
+                } catch (Exception $e) {
+                    LogService::error('Gagal generate Midtrans link untuk sisa tagihan: ' . $e->getMessage(), [
+                        'invoiceId' => $invoice->id,
+                        'error' => $e->getMessage()
+                    ]);
                 }
+
+                $reminder = "*PMBM YAYASAN DARUL HIKMAH*" . PHP_EOL . PHP_EOL;
+                $reminder .= "Assalamualaikum wr wb." . PHP_EOL;
+                $reminder .= "ini adalah pesan otomatis dari sistem" . PHP_EOL . PHP_EOL;
+                $reminder .= "Pembayaran Anda telah kami catat, namun tagihan Anda belum lunas." . PHP_EOL;
+                $reminder .= "Sisa tagihan yang harus dibayarkan adalah sebesar *Rp. " . number_format($sisaTagihan, 0, ',', '.') . "*." . PHP_EOL . PHP_EOL;
+
+                if ($paymentLink) {
+                    $reminder .= "Silakan kunjungi tautan berikut untuk melakukan pembayaran sisa tagihan:" . PHP_EOL;
+                    $reminder .= $paymentLink . PHP_EOL . PHP_EOL;
+                } else {
+                    $reminder .= "Silakan masuk ke aplikasi untuk melanjutkan pembayaran sisa tagihan." . PHP_EOL . PHP_EOL;
+                }
+                $reminder .= "Terima kasih." . PHP_EOL . PHP_EOL;
+                $reminder .= "Wassalamualaikum wr wb" . PHP_EOL . PHP_EOL;
+                $reminder .= "-Panitia PMBM {$institutionName}-" . PHP_EOL;
+
+                SendWhatsAppMessage::dispatch($user->phone, $reminder);
             }
+
+            return response([
+                'status' => 'success',
+                'statusMessage' => 'Notifikasi telah dikirim',
+            ]);
+
         } catch (Exception $e) {
-            LogService::error('PaymentObserver Error: ' . $e->getMessage(), [
+            LogService::error('PaymentController::sendWhatsapp Error: ' . $e->getMessage(), [
                 'paymentId' => $payment->id,
                 'error' => $e->getMessage()
             ]);
@@ -652,3 +650,4 @@ class PaymentController extends Controller
         }
     }
 }
+

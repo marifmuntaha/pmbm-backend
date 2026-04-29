@@ -3,6 +3,7 @@
 namespace App\Models\Account;
 
 use App\Models\Institution;
+use App\Models\Institution\Account;
 use App\Models\Master\Year;
 use App\Models\Payment;
 use Illuminate\Database\Eloquent\Model;
@@ -38,5 +39,10 @@ class Transaction extends Model
     public function payment(): HasOne
     {
         return $this->hasOne(Payment::class, 'id', 'paymentId');
+    }
+
+    public function account(): HasOne
+    {
+        return $this->hasOne(Account::class, 'id', 'accountId');
     }
 }

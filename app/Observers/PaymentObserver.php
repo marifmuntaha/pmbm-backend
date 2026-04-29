@@ -86,10 +86,11 @@ class PaymentObserver
                         ];
 
                         $result = $service->createTransaction($params);
-                        $paymentLink = $result['redirect_url'] ?? '';
+                        $snapToken = $result['token'] ?? '';
+                        $paymentLink = $snapToken ? $service->getRedirectUrl($snapToken) : '';
 
-                        if (!empty($result['token'])) {
-                            Invoice::where('id', $invoice->id)->update(['link' => $result['token']]);
+                        if (!empty($snapToken)) {
+                            Invoice::where('id', $invoice->id)->update(['link' => $snapToken]);
                         }
                     } catch (Exception $e) {
                         LogService::error('Gagal generate Midtrans link untuk sisa tagihan: ' . $e->getMessage(), [

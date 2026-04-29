@@ -64,6 +64,9 @@ Route::prefix('v1')->group(callback: function () {
             Route::apiResource('account', AccountController::class)->only(['index', 'store', 'show']);
             Route::apiResource('transaction', TransactionController::class)->only(['index', 'store']);
         });
+        Route::prefix('dashboard')->group(function () {
+            Route::get('transaction', [TransactionController::class, 'dashboard']);
+        });
         Route::prefix('student')->group(function () {
             Route::get('registration-proof', [StudentController::class, 'generateRegistrationProof']);
             Route::get('treasurer', [StudentController::class, 'treasurer']);

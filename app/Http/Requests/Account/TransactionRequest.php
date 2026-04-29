@@ -20,7 +20,7 @@ class TransactionRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array|string>
      */
     public function rules(): array
     {
@@ -28,7 +28,7 @@ class TransactionRequest extends FormRequest
             'yearId' => 'required|integer',
             'institutionId' => 'required|integer',
             'accountId' => 'required|integer',
-            'paymentId' => 'required|integer',
+            'paymentId' => 'nullable|integer',
             'name' => 'required|string',
             'credit' => 'nullable|integer',
             'debit' => 'nullable|integer',

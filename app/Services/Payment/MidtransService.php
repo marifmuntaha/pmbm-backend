@@ -8,8 +8,8 @@ use Exception;
 
 class MidtransService implements PaymentGatewayInterface
 {
-    protected $serverKey;
-    protected $isProduction;
+    protected mixed $serverKey;
+    protected bool $isProduction;
 
     public function __construct(Gateway $gateway)
     {
@@ -19,14 +19,14 @@ class MidtransService implements PaymentGatewayInterface
 
     public function getRedirectUrl(string $token): string
     {
-        return $this->isProduction
+        return $this->isProduction == 1
             ? "https://app.midtrans.com/snap/v3/redirection/{$token}"
             : "https://app.sandbox.midtrans.com/snap/v3/redirection/{$token}";
     }
 
     public function createTransaction(array $params): array
     {
-        $url = $this->isProduction
+        $url = $this->isProduction == 1
             ? 'https://app.midtrans.com/snap/v1/transactions'
             : 'https://app.sandbox.midtrans.com/snap/v1/transactions';
 

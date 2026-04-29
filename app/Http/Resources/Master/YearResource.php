@@ -14,6 +14,17 @@ class YearResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        return parent::toArray($request);
+        $resources = parent::toArray($request);
+
+        if ($request->has('type')){
+            if ($request->type == 'select') {
+                $resources = [
+                    'value' => $this->id,
+                    'label' => $this->name
+                ];
+            }
+        }
+
+        return $resources;
     }
 }
