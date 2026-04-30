@@ -68,7 +68,7 @@ class WhatsAppService
 
     private function getDeviceId(string $phone): void
     {
-        $defaultDevice = config('whatsapp.device_id', 'whatsapp-default') ?: 'whatsapp-default';
+        $defaultDevice = config('whatsapp.device_id', 'whatsapp-yayasan-1') ?: 'whatsapp-yayasan-1';
 
         $user = User::where('phone', $phone)->first();
         if (!$user || $user->institutionId === null) {
