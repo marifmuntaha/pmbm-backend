@@ -141,6 +141,9 @@ class StudentController extends Controller
                         $q->where('gender', $request->gender);
                     });
                 })
+                ->whereHas('program', function($q) {
+                    $q->where('status', NULL)->orWhere('status', '1');
+                })
                 ->get()->toArray();
             $result = collect($program)->map(function ($item) {
                 return [

@@ -32,6 +32,10 @@ class WhatsAppService
     private function formatPhone(string $phone): string
     {
         $cleaned = preg_replace('/[^0-9]/', '', $phone);
+        // Convert local prefix 08xxx to international 628xxx
+        if (str_starts_with($cleaned, '0')) {
+            $cleaned = '62' . substr($cleaned, 1);
+        }
         if (!str_ends_with($cleaned, '@s.whatsapp.net')) {
             $cleaned .= '@s.whatsapp.net';
         }
@@ -64,17 +68,16 @@ class WhatsAppService
 
     private function getDeviceId(string $phone): void
     {
+        $defaultDevice = config('whatsapp.device_id', 'whatsapp-default') ?: 'whatsapp-default';
+
         $user = User::where('phone', $phone)->first();
-        if ($user->institutionId === null) {
-            $this->deviceId = 'whatsapp-yayasan-1';
-        } else {
-            $whatsapp = Whatsapp::where('institutionId', $user->institutionId)->first();
-            if (!$whatsapp) {
-                $this->deviceId = 'whatsapp-yayasan-1';
-            } else {
-                $this->deviceId = $whatsapp->device;
-            }
+        if (!$user || $user->institutionId === null) {
+            $this->deviceId = $defaultDevice;
+            return;
         }
+
+        $whatsapp = Whatsapp::where('institutionId', $user->institutionId)->first();
+        $this->deviceId = $whatsapp?->device ?: $defaultDevice;
     }
 
     public function deviceAdd(string $device)
@@ -159,6 +162,12 @@ class WhatsAppService
     {
         try {
             $this->getDeviceId($phone);
+
+            if (empty($this->deviceId)) {
+                Log::warning("WhatsApp sendTyping skipped: no device ID resolved for phone [{$phone}]");
+                return;
+            }
+
             $response = Http::withHeaders($this->getHeaders($this->deviceId))
                 ->withBasicAuth($this->user, $this->pass)
                 ->post("$this->url/send/chat-presence", [
@@ -168,10 +177,10 @@ class WhatsAppService
             if ($response->successful()) {
                 return;
             }
-            Log::error('WhatsApp Service Error: ' . $response->body());
+            Log::warning('WhatsApp sendTyping failed: ' . $response->body());
             return;
         } catch (Exception $e) {
-            Log::error('WhatsApp Service Exception: ' . $e->getMessage());
+            Log::error('WhatsApp Service Exception (sendTyping): ' . $e->getMessage());
             return;
         }
     }
