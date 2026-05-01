@@ -4,26 +4,30 @@ namespace App\Http\Controllers\System;
 
 use App\Http\Controllers\Controller;
 use App\Models\System\Log;
+use Exception;
 use Illuminate\Http\Request;
 
 class LogController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Log::with('user')->latest();
+        try {
+            $query = Log::with('user')->latest();
 
-        if ($request->has('level')) {
-            $query->where('level', $request->level);
+            if ($request->has('level')) {
+                $query->where('level', $request->level);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'result' => $query->paginate($request->paginate ?? 10)
+            ]);
+        } catch (Exception $e) {
+            return response([
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ], 500);
         }
-
-        if ($request->has('search')) {
-            $query->where('message', 'like', '%' . $request->search . '%');
-        }
-
-        return response()->json([
-            'status' => 'success',
-            'result' => $query->paginate($request->get('limit', 20))
-        ]);
     }
 
     public function destroy($id)

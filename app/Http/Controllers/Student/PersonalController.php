@@ -15,12 +15,29 @@ class PersonalController extends Controller
     public function index(Request $request)
     {
         try {
-            $personals = new StudentPersonal();
-            $personals = $request->has('userId') ? $personals->whereUserid($request->userId) : $personals;
+            $personals = StudentPersonal::with(['studentProgram'])
+                ->when($request->has('userId'), function ($q) use ($request) {
+                    return $q->where('userId', $request->userId);
+                })
+                ->when($request->has('institutionId'), function ($q) use ($request) {
+                    return $q->whereHas('studentProgram', function ($q) use ($request) {
+                        return $q->where('institutionId', $request->institutionId);
+                    });
+                })
+                ->when($request->has('yearId'), function ($q) use ($request) {
+                    return $q->whereHas('studentProgram', function ($q) use ($request) {
+                        return $q->where('yearId', $request->yearId);
+                    });
+                })
+                ->whereHas('studentProgram', function ($q) use ($request) {
+                    return $q->where('status', 1)->orWhere('status', NULL);
+                })
+                ->get();
+
             return response([
                 'status' => 'success',
                 'statusMessage' => '',
-                'result' => PersonalResource::collection($personals->get()),
+                'result' => PersonalResource::collection($personals),
             ]);
         } catch (Exception $e) {
             return response([

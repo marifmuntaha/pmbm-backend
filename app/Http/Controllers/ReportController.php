@@ -91,32 +91,28 @@ class ReportController extends Controller
     public function payment(Request $request)
     {
         try {
-            $query = Payment::with(['personal', 'invoice']);
-
-            if ($request->filled('yearId')) {
-                $query->where('yearId', $request->yearId);
-            }
-
-            if ($request->filled('institutionId')) {
-                $query->where('institutionId', $request->institutionId);
-            }
-
-            if ($request->user()->institutionId) {
-                $query->where('institutionId', $request->user()->institutionId);
-            }
-
-            if ($request->filled('method')) {
-                $query->where('method', $request->input('method'));
-            }
-
-            if ($request->filled('dateFrom') && $request->filled('dateTo')) {
-                $query->whereBetween('transaction_time', [$request->dateFrom . ' 00:00:00', $request->dateTo . ' 23:59:59']);
-            }
+            $query = Payment::with(['personal', 'invoice'])
+                ->when($request->yearId, function ($q) use ($request) {
+                    $q->whereYearid($request->yearId);
+                })
+                ->when($request->institutionId, function ($q) use ($request) {
+                    $q->where('institutionId', $request->institutionId);
+                })
+                ->when($request->user()->institutionId, function ($query) use ($request) {
+                    $query->where('institutionId', $request->user()->institutionId);
+                })
+                ->when($request->methodFilter, function ($q) use ($request) {
+                    return $q->whereMethod($request->methodFilter);
+                })
+                ->when($request->filled('dateFrom') && $request->filled('dateTo'), function ($q) use ($request) {
+                    $q->whereBetween('transaction_time', [$request->dateFrom . ' 00:00:00', $request->dateTo . ' 23:59:59']);
+                })
+                ->get();
 
             return response([
                 'status' => 'success',
                 'statusMessage' => '',
-                'result' => PaymentResource::collection($query->get())
+                'result' => PaymentResource::collection($query)
             ]);
         } catch (Exception $e) {
             return response([
@@ -144,9 +140,6 @@ class ReportController extends Controller
                 $invoices->whereInstitutionid($institutionId);
                 $payments->whereInstitutionid($institutionId);
             }
-
-            // totalStudents: hanya siswa yang TERVERIFIKASI (has verification + has parent data)
-            // menggunakan StudentProgram agar konsisten dengan definisi "terverifikasi" di seluruh sistem
             $totalStudents = (int) StudentProgram::query()
                 ->when($yearId, fn($q) => $q->where('yearId', $yearId))
                 ->when($institutionId, fn($q) => $q->where('institutionId', $institutionId))
@@ -157,9 +150,6 @@ class ReportController extends Controller
             $totalInvoicedRemaining = (int)(clone $invoices)->sum('amount');
             $totalPaid = (int)(clone $payments)->sum('amount');
 
-
-            // In our system, invoice amounts decrease as payments are made.
-            // totalInvoiced (Original) = totalPaid + totalInvoicedRemaining
             $totalInvoicedOriginal = $totalPaid + $totalInvoicedRemaining;
 
             $recentPayments = Payment::with(['personal', 'invoice'])
@@ -168,6 +158,7 @@ class ReportController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->limit(10)
                 ->get();
+            $request->merge(['type' => 'stats']);
 
             return response([
                 'status' => 'success',

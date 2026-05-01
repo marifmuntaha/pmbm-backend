@@ -32,7 +32,6 @@ class WhatsAppService
     private function formatPhone(string $phone): string
     {
         $cleaned = preg_replace('/[^0-9]/', '', $phone);
-        // Convert local prefix 08xxx to international 628xxx
         if (str_starts_with($cleaned, '0')) {
             $cleaned = '62' . substr($cleaned, 1);
         }
@@ -110,12 +109,12 @@ class WhatsAppService
             if ($response->successful()) {
                 return $response->json();
             } else {
-                Log::error('WhatsApp Service Error: ' . $response->body());
+                $this->deviceAdd($device);
                 return $response->body();
             }
 
         } catch (Exception $e) {
-            Log::error('WhatsApp Service Exception: ' . $e->getMessage());
+            Log::error('WhatsApp Service Error: ' . $e->getMessage());
             return $e->getMessage();
         }
     }

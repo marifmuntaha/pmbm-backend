@@ -26,7 +26,18 @@ class ProductResource extends JsonResource
 
         if ($request->has('type')) {
             if ($request->type == 'select') {
-                $resources = ['value' => $this->id, 'label' => $this->name];
+                $price = number_format($this->price);
+                $resources = [
+                    'value' => $this->id,
+                    'label' => "$this->name {$this->program?->name} {$this->boarding?->name} $price",
+                    'data' => [
+                        "item" => [
+                            "id" => $this->id,
+                            "name" => $this->name,
+                            "price" => $this->price
+                        ],
+                    ],
+                ];
             }
         }
         if ($request->has('list')) {
