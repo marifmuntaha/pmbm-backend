@@ -26,23 +26,21 @@ class PaymentController extends Controller
     public function index(Request $request)
     {
         try {
-            $payments = Payment::with(['personal', 'invoice']);
-            if ($request->has('yearId')) {
-                $payments->whereYearid($request->yearId);
-            }
-            if ($request->has('institutionId')) {
-                $payments->whereInstitutionid($request->institutionId);
-            }
-            if ($request->has('userId')) {
-                $payments->whereUserid($request->userId);
-            }
-            if ($request->has('sort')) {
-                $payments->orderBy('id', $request->sort);
-            }
+            $payments = Payment::with(['personal', 'invoice'])
+                ->when($request->yearId, function ($q) use ($request) {
+                    return $q->whereYearid($request->yearId);
+                })
+                ->when($request->institutionId, function ($q) use ($request) {
+                    $q->whereInstitutionid($request->institutionId);
+                })
+                ->when($request->sort, function ($q) use ($request) {
+                    $q->orderBy('id', $request->sort);
+                })->get();
+
             return response([
                 'status' => 'success',
                 'statusMessage' => '',
-                'result' => PaymentResource::collection($payments->get())
+                'result' => PaymentResource::collection($payments)
             ]);
         } catch (Exception $exception) {
             return response([
@@ -90,7 +88,6 @@ class PaymentController extends Controller
 
             $result = $service->createTransaction($params);
 
-            // Get Midtrans snap token
             $paymentLink = $result['token'] ?? '';
 
             if ($paymentLink) {

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Student\StudentPersonal;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Payment extends Model
@@ -49,5 +50,10 @@ class Payment extends Model
     public function institution(): HasOne
     {
         return $this->hasOne(Institution::class, 'id', 'institutionId');
+    }
+
+    public function creator(): HasOne
+    {
+        return $this->hasOne(User::class, 'id', 'createdBy');
     }
 }

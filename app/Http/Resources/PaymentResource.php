@@ -33,6 +33,15 @@ class PaymentResource extends JsonResource
                     'amount' => $this->amount,
                     'deposited' => $this->deposited,
                     'created_at' => $this->created_at,
+                    'createdBy' => $this->createdBy,
+                    'institution' => [
+                        'id' => $this->institution->id,
+                        'name' => $this->institution->surname,
+                    ],
+                    'creator' => [
+                        'id' => $this->creator?->id,
+                        'name' => $this->creator?->name
+                    ]
                 ];
             }
             if ($request->type === 'stats') {

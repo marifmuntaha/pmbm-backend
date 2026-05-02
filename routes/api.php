@@ -16,6 +16,7 @@ use App\Http\Controllers\Master\ProductController;
 use App\Http\Controllers\Master\RoomController;
 use App\Http\Controllers\Master\RuleController;
 use App\Http\Controllers\Master\YearController;
+use App\Http\Controllers\Payment\ActiveGatewayController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\Payment\GatewayController;
 use App\Http\Controllers\PublicController;
@@ -89,7 +90,7 @@ Route::prefix('v1')->group(callback: function () {
         Route::apiResource('invoice', InvoiceController::class);
         Route::post("payment/{payment}/send-whatsapp", [PaymentController::class, 'sendWhatsapp']);
         Route::prefix('payment')->group(function () {
-            Route::get('active-gateway', [\App\Http\Controllers\Payment\ActiveGatewayController::class, 'index']);
+            Route::get('active-gateway', [ActiveGatewayController::class, 'index']);
             Route::post('cash', [PaymentController::class, 'cash']);
             Route::get('download-all-receipts', [PaymentController::class, 'downloadAllReceipts']);
             Route::get('{id}/generate-receipt', [PaymentController::class, 'generateReceipt']);
@@ -142,7 +143,6 @@ Route::prefix('v1')->group(callback: function () {
         });
     });
 
-    // System Update Route (Sudah ada tapi mari kita pindahkan atau biarkan - user minta log)
     Route::post('/system/update', [\App\Http\Controllers\SystemController::class, 'update'])->middleware('auth:sanctum');
 
     Route::post('/callback/{provider}', [PaymentController::class, 'callback']);

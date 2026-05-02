@@ -4,6 +4,7 @@ namespace App\Models\Student;
 
 use App\Models\Invoice;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class StudentPersonal extends Model
@@ -37,6 +38,10 @@ class StudentPersonal extends Model
         return $this->hasOne(StudentParent::class, 'userId', 'userId');
     }
 
+    public function studentAddress(): HasOne
+    {
+        return $this->hasOne(StudentAddress::class, 'userId', 'userId');
+    }
     public function studentProgram(): HasOne
     {
         return $this->hasOne(StudentProgram::class, 'userId', 'userId');
